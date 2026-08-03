@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Volver al panel</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Usuarios registrados</h2>
+      <p class="section-sub">{{ usuarios|length }} usuario(s){% if q %} que coinciden con "{{ q }}"{% endif %}.</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('admin_logout') }}">Salir del panel admin</a>
+  </div>
+
+  <div class="card" style="max-width:420px">
+    <form method="get">
+      <label>Buscar por nombre, correo o teléfono</label>
+      <input name="q" value="{{ q }}" placeholder="carlos, @gmail.com, 999...">
+      <div style="margin-top:14px; display:flex; gap:10px">
+        <button class="btn" type="submit">Buscar</button>
+        {% if q %}<a class="btn sec" href="{{ url_for('admin_usuarios') }}">Limpiar</a>{% endif %}
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+    <table>
+      <tr>
+        <th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Posición</th>
+        <th>Roles</th><th>Registrado</th>
+      </tr>
+      {% for u in usuarios %}
+        <tr>
+          <td>{{ u.nombre }}</td>
+          <td>{{ u.email or '—' }}</td>
+          <td>{{ u.telefono or '—' }}</td>
+          <td>{{ POSICIONES[u.posicion].emoji }} {{ POSICIONES[u.posicion].label }}</td>
+          <td>
+            {% if u.es_organizador %}
+              <span class="verificado-badge" style="color:#065f46;background:#dcfce7;">🧑‍💼 Organizador{% if u.verificado %} ✅{% endif %}</span>
+            {% elif u.organizador_solicitado %}
+              <span class="badge full">Organizador (pendiente)</span>
+            {% endif %}
+            {% if u.es_dueno_cancha %}
+              <span class="verificado-badge">🏟️ Dueño de cancha</span>
+            {% endif %}
+            {% if u.google_id %}
+              <span class="verificado-badge">🔵 Google</span>
+            {% endif %}
+          </td>
+          <td>{{ u.creado_en[:10] if u.creado_en else '—' }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+{% endblock %}

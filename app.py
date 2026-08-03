@@ -1499,6 +1499,26 @@ def admin_dashboard():
     return render_template("admin_dashboard.html", m=metricas, recaudado=recaudado)
 
 
+@app.route("/admin/usuarios")
+@admin_required
+def admin_usuarios():
+    conn = get_db()
+    q = request.args.get("q", "").strip()
+    if q:
+        like = f"%{q}%"
+        usuarios = conn.execute(
+            "SELECT * FROM usuarios WHERE nombre LIKE ? OR email LIKE ? OR telefono LIKE ? "
+            "ORDER BY creado_en DESC",
+            (like, like, like),
+        ).fetchall()
+    else:
+        usuarios = conn.execute(
+            "SELECT * FROM usuarios ORDER BY creado_en DESC"
+        ).fetchall()
+    conn.close()
+    return render_template("admin_usuarios.html", usuarios=usuarios, q=q)
+
+
 @app.route("/admin/organizadores")
 @admin_required
 def admin_organizadores():
