@@ -20,6 +20,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import (
     Flask, request, redirect, url_for, render_template, flash, jsonify,
     session, g,
@@ -36,6 +37,13 @@ DB_PATH = os.environ.get("MATCHFUTBOL_DB_PATH", os.path.join(BASE_DIR, "matchfut
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("MATCHFUTBOL_SECRET_KEY", "matchfutbol-huacho-demo")
+# Railway (y la mayoria de PaaS) reciben el trafico por un proxy que termina
+# el HTTPS y reenvia al contenedor por HTTP plano. Sin esto, Flask genera
+# URLs externas (url_for(..., _external=True)) como "http://..." en vez de
+# "https://...", lo que rompe el login con Google: el redirect_uri que le
+# manda a Google no coincide con el que registraste (error 400
+# redirect_uri_mismatch) porque el esquema no calza.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 PASSWORD_DEMO_DEFAULT = "huacho123"  # password de los usuarios sembrados en _seed()
 ADMIN_PASSWORD = os.environ.get("MATCHFUTBOL_ADMIN_PASSWORD", "admin123")
