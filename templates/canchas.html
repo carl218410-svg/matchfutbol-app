@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Canchas aliadas</h2>
+      <p class="section-sub">Directorio de canchas del Norte Chico. ¿Tienes una cancha? <a href="{{ url_for('registro') }}">Regístrate como dueño</a>.</p>
+    </div>
+  </div>
+
+  {% if not canchas %}
+    <div class="card"><p class="muted">Todavía no hay canchas registradas.</p></div>
+  {% else %}
+    <div class="grid">
+      {% for c in canchas %}
+        <div class="card">
+          <h2 style="margin:0 0 4px">{{ c.nombre }}</h2>
+          <span class="dist">📍 {{ c.distrito }}</span>
+          {% if c.direccion %}<div class="meta-row" style="margin-top:8px"><span class="ico">🧭</span>{{ c.direccion }}</div>{% endif %}
+          {% if c.horarios %}<div class="meta-row"><span class="ico">🕐</span>{{ c.horarios }}</div>{% endif %}
+          {% if c.descripcion %}<p class="muted" style="margin-top:8px">{{ c.descripcion }}</p>{% endif %}
+          <div class="meta-row" style="margin-top:8px"><span class="ico">👤</span>Contacto: {{ c.dueno_nombre }}</div>
+          <div class="row" style="margin-top:14px">
+            <a class="btn block" href="{{ url_for('reservar_cancha', cancha_id=c.id) }}">📅 Reservar horario</a>
+          </div>
+          {% if c.telefono_contacto %}
+            <div style="margin-top:8px">
+              <a class="btn sec block" href="{{ wa_link(c.telefono_contacto, 'Hola, vi ' ~ c.nombre ~ ' en MatchFutbol y quisiera consultar disponibilidad.') }}" target="_blank" rel="noopener">📱 Consultar por WhatsApp</a>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

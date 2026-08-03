@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
+  <div class="card" style="max-width:420px; margin:0 auto;">
+    <h1>Ingresa a tu cuenta</h1>
+    <p class="muted">Usa tu teléfono y contraseña.</p>
+    <form method="post">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label>Teléfono</label>
+      <input name="telefono" placeholder="999111222" required autofocus>
+      <label>Contraseña</label>
+      <input type="password" name="password" required>
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">Ingresar</button>
+      </div>
+    </form>
+    <p class="muted" style="margin-top:16px">¿Olvidaste tu contraseña? <a href="{{ url_for('recuperar_password') }}">Restablécela con tu correo</a>.</p>
+    <p class="muted" style="margin-top:6px">¿No tienes cuenta? <a href="{{ url_for('registro') }}">Regístrate</a>.</p>
+  </div>
+{% endblock %}

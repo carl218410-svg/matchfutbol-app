@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
+  <div class="card" style="max-width:520px; margin:0 auto;">
+    <h1>Crea tu cuenta</h1>
+    <p class="muted">Regístrate para inscribirte a partidos.</p>
+    <form method="post">
+      <label>Nombre</label>
+      <input name="nombre" placeholder="Nombre y apellido" required>
+      <div class="row">
+        <div>
+          <label>Teléfono</label>
+          <input name="telefono" placeholder="999111222" required>
+        </div>
+        <div>
+          <label>Correo</label>
+          <input type="email" name="email" placeholder="tucorreo@ejemplo.com" required>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:-8px">Usamos tu correo solo para restablecer tu contraseña si la olvidas.</p>
+      <div class="row">
+        <div>
+          <label>Contraseña</label>
+          <input type="password" name="password" minlength="6" required>
+        </div>
+        <div>
+          <label>Confirmar contraseña</label>
+          <input type="password" name="confirmar_password" minlength="6" required>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Posición preferida</label>
+          <select name="posicion">
+            {% for clave, p in POSICIONES.items() %}
+              <option value="{{ clave }}" {{ 'selected' if clave == 'volante' }}>{{ p.emoji }} {{ p.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Nivel de juego</label>
+          <select name="nivel_juego">
+            {% for clave, n in NIVELES.items() %}
+              <option value="{{ clave }}" {{ 'selected' if clave == 'intermedio' }}>{{ n.emoji }} {{ n.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="check-line">
+        <input type="checkbox" name="es_organizador" id="org">
+        <label for="org">Quiero ser organizador</label>
+      </div>
+      <div class="check-line">
+        <input type="checkbox" name="es_dueno_cancha" id="dueno">
+        <label for="dueno">Soy dueño de una cancha</label>
+      </div>
+      <label>DNI (opcional, para verificar identidad de organizador)</label>
+      <input name="dni" placeholder="40011122">
+      <p class="muted" style="margin-top:6px">
+        Las solicitudes de organizador quedan pendientes hasta que el equipo de
+        MatchFutbol las apruebe; el DNI se usa además para verificar tu identidad.
+      </p>
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">Registrarme</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

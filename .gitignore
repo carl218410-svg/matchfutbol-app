@@ -1,0 +1,14 @@
+# Base de datos local (se regenera sola con datos de ejemplo al arrancar)
+matchfutbol.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Variables de entorno reales (nunca subir esto)
+.env
+
+# Editor / SO
+.DS_Store

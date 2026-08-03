@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatchFutbol — Huacho / Norte Chico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --verde: #10b981;
+      --verde-osc: #059669;
+      --verde-deep: #065f46;
+      --lima: #a3e635;
+      --naranja: #f97316;
+      --azul: #3b82f6;
+      --tinta: #0f172a;
+      --texto: #1e293b;
+      --muted: #64748b;
+      --bg: #f1f5f9;
+      --borde: #e2e8f0;
+      --sombra: 0 1px 3px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.06);
+      --sombra-hover: 0 4px 12px rgba(15,23,42,.10), 0 16px 40px rgba(15,23,42,.10);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; font-family: "Inter", system-ui, sans-serif;
+      background: var(--bg); color: var(--texto); line-height: 1.5;
+    }
+    h1, h2, h3, .brand { font-family: "Sora", "Inter", sans-serif; }
+
+    /* ---------- Header ---------- */
+    header {
+      background: linear-gradient(120deg, var(--verde-deep) 0%, var(--verde-osc) 45%, var(--verde) 100%);
+      color: #fff; position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 2px 16px rgba(6,95,70,.25);
+    }
+    .nav-inner {
+      max-width: 960px; margin: 0 auto; padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: -.3px; display: flex; align-items: center; gap: 8px; color: #fff; text-decoration: none; }
+    .brand .ball { font-size: 1.4rem; }
+    .brand small { display: block; font-family: "Inter", sans-serif; font-weight: 500; font-size: .7rem; opacity: .82; letter-spacing: .4px; text-transform: uppercase; }
+    nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    nav a {
+      color: #eafff5; text-decoration: none; font-size: .9rem; font-weight: 500;
+      padding: 7px 13px; border-radius: 8px; transition: background .15s, color .15s;
+      position: relative;
+    }
+    nav a:hover { background: rgba(255,255,255,.15); color: #fff; }
+    nav .navsep { width: 1px; height: 18px; background: rgba(255,255,255,.25); margin: 0 4px; }
+    .notif-dot {
+      position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--naranja); border: 1.5px solid var(--verde-osc);
+    }
+    .verificado-badge {
+      display: inline-flex; align-items: center; gap: 3px; font-size: .74rem; font-weight: 700;
+      color: #1d4ed8; background: #dbeafe; padding: 2px 8px; border-radius: 999px;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      background: linear-gradient(120deg, var(--verde-deep), var(--verde-osc));
+      color: #fff; padding: 34px 20px 46px; text-align: center; position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(163,230,53,.18), transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(59,130,246,.18), transparent 40%);
+    }
+    .hero-inner { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+    .hero h1 { font-size: 2rem; margin: 0 0 8px; font-weight: 800; letter-spacing: -.5px; }
+    .hero p { margin: 0 auto; max-width: 520px; opacity: .92; font-size: 1rem; }
+    .hero .chips { margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .chip { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22); padding: 5px 13px; border-radius: 999px; font-size: .82rem; font-weight: 500; backdrop-filter: blur(4px); }
+
+    /* ---------- Layout ---------- */
+    main { max-width: 960px; margin: 0 auto; padding: 26px 16px 60px; }
+    .card {
+      background: #fff; border: 1px solid var(--borde); border-radius: 16px;
+      padding: 22px; margin-bottom: 18px; box-shadow: var(--sombra);
+      transition: transform .16s, box-shadow .16s;
+    }
+    .section-title { font-size: 1.3rem; margin: 4px 0 2px; font-weight: 700; letter-spacing: -.3px; }
+    .section-sub { color: var(--muted); font-size: .94rem; margin: 0 0 18px; }
+
+    h1 { font-size: 1.5rem; margin: 0 0 6px; }
+    h2 { font-size: 1.12rem; margin: 0 0 12px; }
+    .muted { color: var(--muted); font-size: .9rem; }
+
+    /* ---------- Partido cards (grid) ---------- */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .match-card { display: flex; flex-direction: column; }
+    .match-card:hover { transform: translateY(-3px); box-shadow: var(--sombra-hover); }
+    .match-head {
+      margin: -22px -22px 16px; padding: 16px 22px;
+      background: linear-gradient(120deg, #ecfdf5, #f0fdf4);
+      border-bottom: 1px solid var(--borde); border-radius: 16px 16px 0 0;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+    }
+    .match-head h2 { margin: 0; font-size: 1.05rem; line-height: 1.25; }
+    .match-head .dist { font-size: .82rem; color: var(--verde-osc); font-weight: 600; }
+    .meta-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--texto); margin: 5px 0; }
+    .meta-row .ico { width: 18px; text-align: center; opacity: .7; }
+    .price-tags { display: flex; gap: 8px; margin: 12px 0 16px; flex-wrap: wrap; }
+    .price-tag { font-size: .82rem; font-weight: 600; padding: 5px 11px; border-radius: 9px; background: #f8fafc; border: 1px solid var(--borde); }
+    .price-tag.arq { background: #eff6ff; border-color: #dbeafe; color: var(--azul); }
+    .price-tag b { font-weight: 700; }
+    .spacer { flex: 1; }
+
+    /* ---------- Badges ---------- */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+    .badge.ok { background: #dcfce7; color: var(--verde-deep); }
+    .badge.full { background: #fee2e2; color: #b91c1c; }
+    .badge.arq { background: #dbeafe; color: #1d4ed8; }
+    .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .cat { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: .76rem; font-weight: 700; }
+    .cat.masculino { background: #e0f2fe; color: #0369a1; }
+    .cat.femenino  { background: #fce7f3; color: #be185d; }
+    .cat.mixto     { background: #ede9fe; color: #6d28d9; }
+
+    /* ---------- Carrusel de auspicios ---------- */
+    .ad-carousel { position: relative; margin-bottom: 20px; border-radius: 16px; overflow: hidden; box-shadow: var(--sombra); }
+    .ad-track { position: relative; height: 108px; }
+    .ad {
+      position: absolute; inset: 0; display: flex; align-items: center; gap: 16px;
+      padding: 16px 20px; text-decoration: none; color: #fff;
+      opacity: 0; visibility: hidden; transform: scale(1.02);
+      transition: opacity .6s ease, visibility .6s, transform .6s ease;
+    }
+    .ad.active { opacity: 1; visibility: visible; transform: scale(1); }
+    .ad .ad-emoji {
+      font-size: 2rem; line-height: 1; width: 64px; height: 64px; flex: none;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.22); border-radius: 14px; backdrop-filter: blur(3px);
+    }
+    .ad .ad-body { flex: 1; min-width: 0; }
+    .ad .ad-tag { font-size: .64rem; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; opacity: .9; }
+    .ad .ad-title { font-weight: 800; font-size: 1.05rem; font-family: "Sora", sans-serif; }
+    .ad .ad-text { font-size: .85rem; opacity: .92; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ad .ad-cta {
+      font-size: .82rem; font-weight: 700; white-space: nowrap;
+      background: rgba(255,255,255,.22); padding: 8px 14px; border-radius: 9px;
+    }
+    /* paletas por auspicio */
+    .ad.p0 { background: linear-gradient(120deg, #ea580c, #f97316); }
+    .ad.p1 { background: linear-gradient(120deg, #0e7490, #06b6d4); }
+    .ad.p2 { background: linear-gradient(120deg, #7c3aed, #a855f7); }
+    /* puntos */
+    .ad-dots { position: absolute; bottom: 9px; right: 14px; display: flex; gap: 6px; z-index: 2; }
+    .ad-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.45); cursor: pointer; border: none; padding: 0; transition: background .2s, width .2s; }
+    .ad-dot.active { background: #fff; width: 20px; border-radius: 999px; }
+    @media (max-width: 520px) {
+      .ad-track { height: 128px; }
+      .ad .ad-cta { display: none; }
+    }
+
+    /* ---------- Filtros ---------- */
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .filter-pill {
+      text-decoration: none; padding: 8px 16px; border-radius: 999px; font-size: .88rem; font-weight: 600;
+      background: #fff; border: 1.5px solid var(--borde); color: var(--muted); transition: all .15s;
+    }
+    .filter-pill:hover { border-color: var(--verde); color: var(--verde-osc); }
+    .filter-pill.active { background: var(--verde-osc); border-color: var(--verde-osc); color: #fff; }
+
+    /* ---------- Capacity bar ---------- */
+    .cap { margin-top: 4px; }
+    .cap-bar { height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .cap-fill { height: 100%; background: linear-gradient(90deg, var(--verde), var(--lima)); border-radius: 999px; transition: width .3s; }
+    .cap-fill.hot { background: linear-gradient(90deg, var(--naranja), #ef4444); }
+    .cap-label { font-size: .8rem; color: var(--muted); margin-top: 5px; }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      background: linear-gradient(120deg, var(--verde-osc), var(--verde));
+      color: #fff; border: none; padding: 11px 18px; border-radius: 10px; cursor: pointer;
+      text-decoration: none; font-size: .95rem; font-weight: 600; font-family: inherit;
+      box-shadow: 0 2px 8px rgba(16,185,129,.28); transition: transform .12s, box-shadow .12s, filter .12s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(16,185,129,.36); filter: brightness(1.03); }
+    .btn:active { transform: translateY(0); }
+    .btn.block { width: 100%; }
+    .btn.sec { background: #fff; color: var(--verde-osc); border: 1.5px solid var(--verde); box-shadow: none; }
+    .btn.sec:hover { background: #f0fdf4; }
+    .btn.ghost { background: rgba(255,255,255,.14); color: #fff; box-shadow: none; border: 1px solid rgba(255,255,255,.3); }
+    .btn.ghost:hover { background: rgba(255,255,255,.24); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-slot { padding: 6px 12px; font-size: .82rem; border-radius: 8px; }
+
+    /* ---------- Selector de puestos tipo mapa de asientos ---------- */
+    .pitch { background: linear-gradient(160deg,#ecfdf5,#f0fdf4); border: 1px solid var(--borde); border-radius: 16px; padding: 18px 10px 14px; }
+    .pitch-row { display: flex; justify-content: center; gap: 10px; margin: 9px 0; flex-wrap: wrap; }
+    .seat {
+      width: 58px; height: 50px; border-radius: 13px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; font-size: 1.2rem; border: none;
+      font-family: inherit; padding: 2px;
+    }
+    .seat .seat-sub { font-size: .58rem; font-weight: 700; letter-spacing: .2px; margin-top: 1px; }
+    .seat.libre { background: #fff; border: 2px dashed #cbd5e1; color: #94a3b8; }
+    button.seat.libre { cursor: pointer; transition: transform .12s, border-color .12s, background .12s, color .12s; }
+    button.seat.libre:hover { border-color: var(--verde); color: var(--verde-osc); background: #f0fdf4; transform: translateY(-2px); }
+    .seat.ocupado {
+      color: #fff; font-weight: 800; font-size: .68rem; line-height: 1.1; text-align: center;
+      word-break: break-word; overflow: hidden;
+    }
+    .seat.ocupado.pagado { background: linear-gradient(135deg, var(--verde), var(--verde-osc)); }
+    .seat.ocupado.pendiente { background: linear-gradient(135deg, var(--naranja), #ea580c); }
+    a.seat.ocupado { text-decoration: none; transition: transform .12s; }
+    a.seat.ocupado:hover { transform: translateY(-2px); }
+    .seat-form { display: contents; }
+    .seat-legend { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 12px; font-size: .78rem; color: var(--muted); }
+    .seat-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .seat-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+    /* ---------- Forms ---------- */
+    label { display: block; margin: 14px 0 5px; font-size: .86rem; font-weight: 600; color: var(--tinta); }
+    input, select {
+      width: 100%; padding: 11px 13px; border: 1.5px solid var(--borde);
+      border-radius: 10px; font-size: .95rem; font-family: inherit; color: var(--texto);
+      background: #fff; transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+    .row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 140px; }
+    .check-line { display: flex; align-items: center; gap: 9px; margin-top: 16px; }
+    .check-line input { width: auto; }
+    .check-line label { margin: 0; font-weight: 500; }
+
+    /* ---------- Flash ---------- */
+    .flash { padding: 13px 16px; border-radius: 11px; margin-bottom: 16px; font-size: .92rem; font-weight: 500; display: flex; align-items: center; gap: 9px; border: 1px solid transparent; }
+    .flash.ok { background: #dcfce7; color: var(--verde-deep); border-color: #bbf7d0; }
+    .flash.error { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+
+    /* ---------- Table ---------- */
+    table { width: 100%; border-collapse: collapse; }
+    td, th { text-align: left; padding: 10px 6px; border-bottom: 1px solid var(--borde); font-size: .92rem; }
+    th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .4px; }
+    /* En celular las tablas con varias columnas no caben: en vez de romper
+       el layout, se desplazan horizontalmente dentro de este contenedor. */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -2px; }
+    .table-wrap table { min-width: 480px; }
+
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 500; margin-bottom: 14px; }
+    .back-link:hover { color: var(--verde-osc); }
+
+    footer { text-align: center; color: var(--muted); font-size: .82rem; padding: 24px 16px 40px; }
+
+    @media (max-width: 560px) {
+      .hero h1 { font-size: 1.6rem; }
+      .nav-inner { flex-direction: column; gap: 10px; }
+      nav { justify-content: center; }
+      nav a { padding: 6px 10px; font-size: .84rem; }
+      .seat { width: 50px; height: 46px; font-size: 1.05rem; }
+      .pitch-row { gap: 7px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-inner">
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="ball">⚽</span>
+        <span>MatchFutbol</span>
+      </a>
+      <nav>
+        <a href="{{ url_for('index') }}">Partidos</a>
+        <a href="{{ url_for('liga') }}">Liga</a>
+        <a href="{{ url_for('canchas') }}">Canchas</a>
+        {% if usuario_actual and usuario_actual.es_organizador %}
+          <a href="{{ url_for('crear_partido') }}">Crear partido</a>
+        {% endif %}
+        {% if usuario_actual and usuario_actual.es_dueno_cancha %}
+          <a href="{{ url_for('mis_canchas') }}">Mis canchas</a>
+        {% endif %}
+        {% if usuario_actual %}
+          <a href="{{ url_for('notificaciones') }}">Notificaciones{% if notif_no_leidas %}<span class="notif-dot"></span>{% endif %}</a>
+          <span class="navsep"></span>
+          <a href="{{ url_for('perfil') }}">{{ usuario_actual.nombre }}</a>
+          <a href="{{ url_for('logout') }}">Salir</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">Ingresar</a>
+          <a href="{{ url_for('registro') }}">Registro</a>
+        {% endif %}
+        {% if es_admin %}
+          <span class="navsep"></span>
+          <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  {% block hero %}{% endblock %}
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">
+          <span>{% if cat == 'ok' %}✅{% else %}⚠️{% endif %}</span>{{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    MatchFutbol · demo MVP ⚽
+    {% if not es_admin %}
+      · <a href="{{ url_for('admin_login') }}" style="color:inherit">Panel admin</a>
+    {% endif %}
+  </footer>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Volver al panel</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Admin — Liga MatchFutbol</h2>
+      <p class="section-sub">Temporada {{ temporada }}. Los puntos se calculan solos (PG×3 + PE).</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('admin_logout') }}">Salir del panel admin</a>
+  </div>
+
+  <div class="card" style="max-width:480px">
+    <h2>Agregar equipo</h2>
+    <form method="post" action="{{ url_for('admin_liga_nuevo_equipo') }}">
+      <div class="row">
+        <div>
+          <label>Nombre del equipo</label>
+          <input name="nombre" placeholder="Deportivo Huacho" required>
+        </div>
+        <div>
+          <label>Distrito</label>
+          <input name="distrito" placeholder="Huacho" required>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn" type="submit">Agregar</button>
+      </div>
+    </form>
+  </div>
+
+  {% for e in equipos %}
+    <form id="liga-{{ e.id }}" method="post" action="{{ url_for('admin_liga_actualizar', equipo_id=e.id) }}"></form>
+  {% endfor %}
+
+  <div class="card">
+    <div class="table-wrap">
+    <table style="min-width:640px">
+      <tr><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>Pts</th><th></th></tr>
+      {% for e in equipos %}
+        {% set t = tabla.get(e.id) %}
+        <tr>
+          <td style="vertical-align:middle"><b>{{ e.nombre }}</b><br><span class="muted">{{ e.distrito }}</span></td>
+          <td><input form="liga-{{ e.id }}" type="number" name="pj" min="0" value="{{ t.pj if t else 0 }}" style="width:64px"></td>
+          <td><input form="liga-{{ e.id }}" type="number" name="pg" min="0" value="{{ t.pg if t else 0 }}" style="width:64px"></td>
+          <td><input form="liga-{{ e.id }}" type="number" name="pe" min="0" value="{{ t.pe if t else 0 }}" style="width:64px"></td>
+          <td><input form="liga-{{ e.id }}" type="number" name="pp" min="0" value="{{ t.pp if t else 0 }}" style="width:64px"></td>
+          <td><input form="liga-{{ e.id }}" type="number" name="gf" min="0" value="{{ t.gf if t else 0 }}" style="width:64px"></td>
+          <td><input form="liga-{{ e.id }}" type="number" name="gc" min="0" value="{{ t.gc if t else 0 }}" style="width:64px"></td>
+          <td>{{ t.pts if t else 0 }}</td>
+          <td><button class="btn sec" form="liga-{{ e.id }}" type="submit">Guardar</button></td>
+        </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+{% endblock %}

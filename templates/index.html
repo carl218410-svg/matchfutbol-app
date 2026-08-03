@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block hero %}
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Encuentra tu pichanga</h1>
+      <p>Únete a un partido cerca de ti, elige tu posición y juega. Fútbol masculino, femenino y mixto. Los arqueros pagan menos.</p>
+      <div class="chips">
+        <span class="chip">⚽ {{ partidos|length }} partidos activos</span>
+        <span class="chip">👥 Masculino · Femenino · Mixto</span>
+        <span class="chip">🥅 Precio especial arqueros</span>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block content %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Partidos disponibles</h2>
+      <p class="section-sub">Elige uno e inscríbete en segundos.</p>
+    </div>
+    {% if usuario_actual and usuario_actual.es_organizador %}
+      <a class="btn sec" href="{{ url_for('crear_partido') }}">+ Crear partido</a>
+    {% elif not usuario_actual %}
+      <a class="btn sec" href="{{ url_for('login') }}">Ingresar</a>
+    {% endif %}
+  </div>
+
+  {% if anuncios %}
+    <div class="ad-carousel" id="adCarousel">
+      <div class="ad-track">
+        {% for a in anuncios %}
+          <a class="ad p{{ loop.index0 }} {{ 'active' if loop.first }}" href="{{ a.url or '#' }}">
+            <span class="ad-emoji">{{ a.emoji }}</span>
+            <span class="ad-body">
+              <span class="ad-tag">Patrocinado · {{ a.anunciante }}</span>
+              <div class="ad-title">{{ a.titulo }}</div>
+              <div class="ad-text">{{ a.texto }}</div>
+            </span>
+            <span class="ad-cta">Ver oferta →</span>
+          </a>
+        {% endfor %}
+      </div>
+      {% if anuncios|length > 1 %}
+        <div class="ad-dots">
+          {% for a in anuncios %}
+            <button class="ad-dot {{ 'active' if loop.first }}" data-i="{{ loop.index0 }}" aria-label="Auspicio {{ loop.index }}"></button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    <script>
+      (function () {
+        var root = document.getElementById('adCarousel');
+        if (!root) return;
+        var ads = root.querySelectorAll('.ad');
+        var dots = root.querySelectorAll('.ad-dot');
+        if (ads.length < 2) return;
+        var i = 0, timer;
+        function show(n) {
+          i = (n + ads.length) % ads.length;
+          ads.forEach(function (el, k) { el.classList.toggle('active', k === i); });
+          dots.forEach(function (el, k) { el.classList.toggle('active', k === i); });
+        }
+        function next() { show(i + 1); }
+        function start() { timer = setInterval(next, 10000); }
+        function stop() { clearInterval(timer); }
+        dots.forEach(function (d) {
+          d.addEventListener('click', function () { stop(); show(+d.dataset.i); start(); });
+        });
+        root.addEventListener('mouseenter', stop);
+        root.addEventListener('mouseleave', start);
+        start();
+      })();
+    </script>
+  {% endif %}
+
+  <div class="filters">
+    <a class="filter-pill {{ 'active' if categoria == 'todos' }}" href="{{ url_for('index', distrito=distrito, desde=desde, hasta=hasta) }}">Todos</a>
+    <a class="filter-pill {{ 'active' if categoria == 'masculino' }}" href="{{ url_for('index', categoria='masculino', distrito=distrito, desde=desde, hasta=hasta) }}">Masculino</a>
+    <a class="filter-pill {{ 'active' if categoria == 'femenino' }}" href="{{ url_for('index', categoria='femenino', distrito=distrito, desde=desde, hasta=hasta) }}">Femenino</a>
+    <a class="filter-pill {{ 'active' if categoria == 'mixto' }}" href="{{ url_for('index', categoria='mixto', distrito=distrito, desde=desde, hasta=hasta) }}">Mixto</a>
+  </div>
+
+  <form method="get" action="{{ url_for('index') }}" class="card" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; padding:16px 18px;">
+    <input type="hidden" name="categoria" value="{{ categoria }}">
+    <div style="flex:1; min-width:140px">
+      <label style="margin:0 0 5px">Distrito</label>
+      <select name="distrito">
+        <option value="todos" {{ 'selected' if distrito == 'todos' }}>Todos los distritos</option>
+        {% for d in distritos %}
+          <option value="{{ d }}" {{ 'selected' if distrito == d }}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex:1; min-width:130px">
+      <label style="margin:0 0 5px">Desde</label>
+      <input type="date" name="desde" value="{{ desde }}">
+    </div>
+    <div style="flex:1; min-width:130px">
+      <label style="margin:0 0 5px">Hasta</label>
+      <input type="date" name="hasta" value="{{ hasta }}">
+    </div>
+    <button class="btn sec" type="submit" style="height:44px">Filtrar</button>
+  </form>
+
+  {% if not partidos %}
+    <div class="card">
+      <p class="muted">No hay partidos con esos filtros. <a href="{{ url_for('index') }}">Ver todos</a> o <a href="{{ url_for('crear_partido') }}">crea uno</a>.</p>
+    </div>
+  {% else %}
+    <div class="grid">
+      {% for p in partidos %}
+        {% set pct = (p.ocupados / p.cupos_total * 100) | round(0, 'floor') %}
+        <div class="card match-card">
+          <div class="match-head">
+            <div>
+              <h2>{{ p.cancha }}</h2>
+              <span class="dist">📍 {{ p.distrito }}</span>
+            </div>
+            {% if p.disponibles > 0 %}
+              <span class="badge ok"><span class="dot"></span>{{ p.disponibles }} libres</span>
+            {% else %}
+              <span class="badge full">Lleno</span>
+            {% endif %}
+          </div>
+
+          <div style="margin-bottom:10px">
+            {% set icono = {'masculino':'♂', 'femenino':'♀', 'mixto':'⚥'} %}
+            <span class="cat {{ p.categoria }}">{{ icono[p.categoria] }} {{ p.categoria|capitalize }}</span>
+          </div>
+          <div class="meta-row"><span class="ico">📅</span> {{ p.fecha }}</div>
+          <div class="meta-row"><span class="ico">🕐</span> {{ p.hora }}</div>
+          <div class="meta-row">
+            <span class="ico">👤</span> Organiza {{ p.organizador }}
+            {% if p.organizador_verificado %}<span class="verificado-badge">✅</span>{% endif %}
+          </div>
+
+          <div class="price-tags">
+            <span class="price-tag">Jugador <b>S/ {{ '%.0f'|format(p.precio_jugador) }}</b></span>
+            <span class="price-tag arq">🥅 Arquero <b>S/ {{ '%.0f'|format(p.precio_arquero) }}</b></span>
+          </div>
+
+          <div class="cap">
+            <div class="cap-bar">
+              <div class="cap-fill {{ 'hot' if pct >= 70 else '' }}" style="width: {{ pct }}%"></div>
+            </div>
+            <div class="cap-label">{{ p.ocupados }} de {{ p.cupos_total }} cupos ocupados</div>
+          </div>
+
+          <div class="spacer" style="margin-top:16px"></div>
+          <a class="btn block" href="{{ url_for('ver_partido', partido_id=p.id) }}">Ver e inscribirse →</a>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

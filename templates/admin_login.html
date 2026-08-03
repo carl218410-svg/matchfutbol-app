@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
+  <div class="card" style="max-width:380px; margin:0 auto;">
+    <h1>Panel admin</h1>
+    <p class="muted">Verificación de identidad de organizadores.</p>
+    <form method="post">
+      <label>Password de admin</label>
+      <input type="password" name="password" required autofocus>
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">Ingresar</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

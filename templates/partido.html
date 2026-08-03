@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
+
+  {% set pct = (partido.ocupados / partido.cupos_total * 100) | round(0, 'floor') %}
+  {% if partido.estado == 'cancelado' %}
+    <div class="flash error"><span>⚠️</span>Este partido fue cancelado por el organizador.</div>
+  {% endif %}
+  <div class="card">
+    <div class="match-head" style="margin-bottom:18px">
+      <div>
+        <h1 style="margin:0">{{ partido.cancha }}</h1>
+        <span class="dist">📍 {{ partido.distrito }}</span>
+      </div>
+      {% if partido.estado == 'cancelado' %}
+        <span class="badge full">Cancelado</span>
+      {% elif partido.disponibles > 0 %}
+        <span class="badge ok"><span class="dot"></span>{{ partido.disponibles }} cupos libres</span>
+      {% else %}
+        <span class="badge full">Lleno</span>
+      {% endif %}
+    </div>
+
+    <div style="margin-bottom:12px">
+      {% set icono = {'masculino':'♂', 'femenino':'♀', 'mixto':'⚥'} %}
+      <span class="cat {{ partido.categoria }}">{{ icono[partido.categoria] }} Fútbol {{ partido.categoria }}</span>
+    </div>
+    <div class="row">
+      <div class="meta-row"><span class="ico">📅</span> {{ partido.fecha }}</div>
+      <div class="meta-row"><span class="ico">🕐</span> {{ partido.hora }}</div>
+      <div class="meta-row">
+        <span class="ico">👤</span> {{ partido.organizador }}
+        {% if partido.organizador_verificado %}
+          <span class="verificado-badge">✅ Verificado</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if usuario_actual and usuario_actual.id == partido.organizador_id %}
+      <div class="row" style="margin-top:14px">
+        {% if partido.estado == 'activo' %}
+          <a class="btn sec" href="{{ url_for('recordatorio', partido_id=partido.id) }}">⏰ Enviar recordatorio</a>
+          <a class="btn sec" href="{{ url_for('editar_partido', partido_id=partido.id) }}">✏️ Editar partido</a>
+        {% endif %}
+        <a class="btn sec" href="{{ url_for('cancelar_partido', partido_id=partido.id) }}">🚫 Cancelar partido</a>
+      </div>
+    {% endif %}
+
+    {% if partido.grupo_whatsapp %}
+      <a class="btn block" style="margin-top:14px" href="{{ partido.grupo_whatsapp }}" target="_blank" rel="noopener">💬 Unirse al grupo de WhatsApp del partido</a>
+    {% endif %}
+    {% if usuario_actual and usuario_actual.id == partido.organizador_id %}
+      <form method="post" action="{{ url_for('actualizar_grupo_whatsapp', partido_id=partido.id) }}" style="margin-top:14px">
+        <label>{{ 'Actualizar enlace del grupo' if partido.grupo_whatsapp else 'Grupo de WhatsApp (opcional)' }}</label>
+        <div class="row">
+          <input name="grupo_whatsapp" placeholder="https://chat.whatsapp.com/xxxxxxxx" value="{{ partido.grupo_whatsapp or '' }}" style="flex:2">
+          <button class="btn sec" type="submit" style="flex:1">
+            {{ 'Guardar' if partido.grupo_whatsapp else 'Crea el grupo en tu WhatsApp y pega el enlace aquí' }}
+          </button>
+        </div>
+      </form>
+    {% endif %}
+
+    <div class="price-tags">
+      <span class="price-tag">Jugador <b>S/ {{ '%.2f'|format(partido.precio_jugador) }}</b></span>
+      <span class="price-tag arq">🥅 Arquero <b>S/ {{ '%.2f'|format(partido.precio_arquero) }}</b></span>
+    </div>
+
+    <div class="cap">
+      <div class="cap-bar">
+        <div class="cap-fill {{ 'hot' if pct >= 70 else '' }}" style="width: {{ pct }}%"></div>
+      </div>
+      <div class="cap-label">{{ partido.ocupados }} de {{ partido.cupos_total }} cupos ocupados</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Inscribirse a este partido</h2>
+    {% if not usuario_actual %}
+      <p class="muted">
+        <a href="{{ url_for('login', next=request.path) }}">Inicia sesión</a> o
+        <a href="{{ url_for('registro') }}">regístrate</a> para inscribirte.
+      </p>
+    {% elif mi_inscripcion %}
+      <div class="flash {{ 'ok' if mi_inscripcion.estado_pago == 'pagado' else 'error' }}">
+        <span>{{ '✅' if mi_inscripcion.estado_pago == 'pagado' else '⏳' }}</span>
+        Ya estás inscrito en el <b>Equipo {{ mi_inscripcion.equipo }}</b> como
+        {{ POSICIONES[mi_inscripcion.posicion].emoji }} {{ POSICIONES[mi_inscripcion.posicion].label }} —
+        {{ 'pago confirmado' if mi_inscripcion.estado_pago == 'pagado' else 'pago pendiente' }}.
+      </div>
+      <div class="row">
+        {% if mi_inscripcion.estado_pago != 'pagado' %}
+          <a class="btn" href="{{ url_for('pagar', inscripcion_id=mi_inscripcion.id) }}">Registrar pago</a>
+        {% endif %}
+        <form method="post" action="{{ url_for('cancelar_inscripcion', inscripcion_id=mi_inscripcion.id) }}">
+          <button class="btn sec" type="submit">Cancelar inscripción</button>
+        </form>
+      </div>
+    {% elif partido.estado == 'cancelado' %}
+      <p class="muted">Este partido fue cancelado. Revisa otros en la <a href="{{ url_for('index') }}">lista de partidos</a>.</p>
+    {% elif partido.disponibles > 0 %}
+      <p class="muted">Toca un puesto libre abajo para unirte a ese equipo.</p>
+    {% else %}
+      <p class="muted">Este partido ya está lleno. Revisa otros en la <a href="{{ url_for('index') }}">lista de partidos</a>.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Equipos <span class="muted">({{ partido.ocupados }}/{{ partido.cupos_total }})</span></h2>
+    <p class="section-sub" style="margin-top:-6px">6 vs 6 · toca un puesto libre para unirte, como elegir asiento.</p>
+    {% set es_organizador_partido = usuario_actual and usuario_actual.id == partido.organizador_id %}
+    {% set puedo_unirme = usuario_actual and not mi_inscripcion and partido.estado == 'activo' %}
+    <div class="row" style="align-items:flex-start">
+      {% for equipo in ['A', 'B'] %}
+        <div style="flex:1; min-width:230px">
+          <h3 style="margin:6px 0; text-align:center">Equipo {{ equipo }}</h3>
+          <div class="pitch">
+            {% for clave, p in POSICIONES.items() %}
+              <div class="pitch-row">
+                {% for slot in plantilla[equipo][clave] %}
+                  {% if slot %}
+                    {% set pago_clase = 'pagado' if slot.estado_pago == 'pagado' else 'pendiente' %}
+                    {% if es_organizador_partido %}
+                      <a class="seat ocupado {{ pago_clase }}"
+                         href="{{ wa_link(slot.telefono, 'Hola ' ~ slot.nombre ~ ', recordatorio de tu partido en ' ~ partido.cancha ~ ' el ' ~ partido.fecha ~ ' a las ' ~ partido.hora ~ '. ¡No faltes! - MatchFutbol' ~ (' Únete al grupo: ' ~ partido.grupo_whatsapp if partido.grupo_whatsapp else '')) }}"
+                         target="_blank" rel="noopener"
+                         title="{{ slot.nombre }} · {{ 'Pagado' if slot.estado_pago == 'pagado' else 'Pago pendiente' }} · Enviar WhatsApp">{{ slot.nombre.split(' ')[0] }}</a>
+                    {% else %}
+                      <span class="seat ocupado {{ pago_clase }}"
+                            title="{{ slot.nombre }} · {{ 'Pagado' if slot.estado_pago == 'pagado' else 'Pago pendiente' }}">{{ slot.nombre.split(' ')[0] }}</span>
+                    {% endif %}
+                  {% elif puedo_unirme %}
+                    <form class="seat-form" method="post" action="{{ url_for('inscribir') }}">
+                      <input type="hidden" name="partido_id" value="{{ partido.id }}">
+                      <input type="hidden" name="slot" value="{{ equipo }}:{{ clave }}">
+                      <button class="seat libre" type="submit" title="Unirme como {{ p.label }} — S/ {{ '%.2f'|format(partido.precio_arquero if clave == 'arquero' else partido.precio_jugador) }}">
+                        {{ p.emoji }}<span class="seat-sub">{{ p.label[:3]|upper }}</span>
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="seat libre" title="Libre — {{ p.label }}">{{ p.emoji }}<span class="seat-sub">{{ p.label[:3]|upper }}</span></span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="seat-legend">
+      <span><i style="background:linear-gradient(135deg,var(--verde),var(--verde-osc))"></i> Pagado</span>
+      <span><i style="background:linear-gradient(135deg,var(--naranja),#ea580c)"></i> Pago pendiente</span>
+      <span><i style="background:#fff;border:2px dashed #cbd5e1"></i> Libre</span>
+    </div>
+  </div>
+{% endblock %}

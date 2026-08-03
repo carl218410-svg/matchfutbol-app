@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2 class="section-title">Liga MatchFutbol — Norte Chico</h2>
+  <p class="section-sub">Temporada {{ temporada }}</p>
+
+  {% if not tabla %}
+    <div class="card"><p class="muted">Todavía no hay equipos inscritos en la liga.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table style="min-width:640px">
+        <tr>
+          <th>#</th><th>Equipo</th><th>Distrito</th><th>PJ</th><th>PG</th><th>PE</th>
+          <th>PP</th><th>GF</th><th>GC</th><th>DIF</th><th>Pts</th>
+        </tr>
+        {% for e in tabla %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><b>{{ e.nombre }}</b></td>
+            <td>{{ e.distrito }}</td>
+            <td>{{ e.pj }}</td>
+            <td>{{ e.pg }}</td>
+            <td>{{ e.pe }}</td>
+            <td>{{ e.pp }}</td>
+            <td>{{ e.gf }}</td>
+            <td>{{ e.gc }}</td>
+            <td>{{ e.gf - e.gc }}</td>
+            <td><b>{{ e.pts }}</b></td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

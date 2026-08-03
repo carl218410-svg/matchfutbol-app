@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('mis_canchas') }}" class="back-link">← Volver a mis canchas</a>
+  <div class="card" style="max-width:560px; margin:0 auto;">
+    <h1>{{ 'Editar cancha' if cancha else 'Nueva cancha' }}</h1>
+    <form method="post">
+      <label>Nombre</label>
+      <input name="nombre" placeholder="Complejo El Golazo" value="{{ cancha.nombre if cancha else '' }}" required>
+      <label>Distrito</label>
+      <input name="distrito" placeholder="Huacho" value="{{ cancha.distrito if cancha else 'Huacho' }}" required>
+      <label>Dirección</label>
+      <input name="direccion" placeholder="Av. 28 de Julio 450" value="{{ cancha.direccion if cancha else '' }}">
+      <label>Teléfono de contacto</label>
+      <input name="telefono_contacto" placeholder="999888111" value="{{ cancha.telefono_contacto if cancha else '' }}">
+      <label>Horarios disponibles</label>
+      <input name="horarios" placeholder="Lun a dom 17:00-23:00" value="{{ cancha.horarios if cancha else '' }}">
+      <label>Descripción</label>
+      <input name="descripcion" placeholder="Grass sintético, vestuarios, etc." value="{{ cancha.descripcion if cancha else '' }}">
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">{{ 'Guardar cambios' if cancha else 'Registrar cancha' }}</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

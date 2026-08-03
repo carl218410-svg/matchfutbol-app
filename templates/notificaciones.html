@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
+  <h2 class="section-title">Notificaciones</h2>
+  <p class="section-sub">Confirmaciones, recordatorios y cupos liberados.</p>
+
+  {% set iconos = {'confirmacion': '✅', 'recordatorio': '⏰', 'cupo_liberado': '🔓'} %}
+  {% if not notificaciones %}
+    <div class="card"><p class="muted">Todavía no tienes notificaciones.</p></div>
+  {% else %}
+    {% for n in notificaciones %}
+      <div class="card" style="display:flex; gap:12px; align-items:flex-start; padding:16px 20px;">
+        <span style="font-size:1.3rem">{{ iconos.get(n.tipo, '📣') }}</span>
+        <div>
+          <p style="margin:0">{{ n.mensaje }}</p>
+          <span class="muted" style="font-size:.78rem">{{ n.creado_en }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

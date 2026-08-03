@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
+  <h2 class="section-title">Mi perfil</h2>
+  <p class="section-sub">{{ usuario.nombre }} · {{ usuario.telefono }}</p>
+
+  <div class="card" style="max-width:520px">
+    <h2>Datos y preferencias</h2>
+    {% if usuario.es_organizador %}
+      <p class="muted">
+        Organizador
+        {% if usuario.verificado %}
+          <span class="verificado-badge" style="color:#065f46;background:#dcfce7;">✅ Verificado</span>
+        {% else %}
+          <span class="badge full">Identidad pendiente</span>
+        {% endif %}
+      </p>
+    {% elif usuario.organizador_solicitado %}
+      <p class="muted"><span class="badge full">Solicitud de organizador pendiente de aprobación</span></p>
+    {% endif %}
+    {% if usuario.es_dueno_cancha %}
+      <p class="muted"><span class="verificado-badge">🏟️ Dueño de cancha</span></p>
+    {% endif %}
+
+    <form method="post">
+      <label>Correo {% if not usuario.email %}(agrégalo para poder restablecer tu contraseña){% endif %}</label>
+      <input type="email" name="email" value="{{ usuario.email or '' }}" placeholder="tucorreo@ejemplo.com">
+      <div class="row">
+        <div>
+          <label>Posición preferida</label>
+          <select name="posicion">
+            {% for clave, p in POSICIONES.items() %}
+              <option value="{{ clave }}" {{ 'selected' if usuario.posicion == clave }}>{{ p.emoji }} {{ p.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Nivel de juego</label>
+          <select name="nivel_juego">
+            {% for clave, n in NIVELES.items() %}
+              <option value="{{ clave }}" {{ 'selected' if usuario.nivel_juego == clave }}>{{ n.emoji }} {{ n.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <label>DNI {% if usuario.dni %}(ya registrado){% else %}(agrégalo para poder verificarte){% endif %}</label>
+      <input name="dni" value="{{ usuario.dni or '' }}" placeholder="40011122">
+      <div style="margin-top:18px">
+        <button class="btn" type="submit">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+
+  <h2 class="section-title" style="margin-top:26px">Próximos partidos <span class="muted">({{ proximos|length }})</span></h2>
+  {% if not proximos %}
+    <div class="card"><p class="muted">No tienes partidos próximos. <a href="{{ url_for('index') }}">Busca uno</a>.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Partido</th><th>Fecha</th><th>Posición</th><th>Pago</th></tr>
+        {% for h in proximos %}
+          <tr>
+            <td><a href="{{ url_for('ver_partido', partido_id=h.partido_id) }}">{{ h.cancha }} — {{ h.distrito }}</a></td>
+            <td>{{ h.fecha }} {{ h.hora }}</td>
+            <td>{{ POSICIONES[h.posicion].emoji }} {{ POSICIONES[h.posicion].label }}</td>
+            <td>{% if h.estado_pago == 'pagado' %}<span class="badge ok">Pagado</span>{% else %}<span class="badge full">Pendiente</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+
+  <h2 class="section-title" style="margin-top:26px">Historial jugado <span class="muted">({{ jugados|length }})</span></h2>
+  {% if not jugados %}
+    <div class="card"><p class="muted">Todavía no tienes partidos jugados.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Partido</th><th>Fecha</th><th>Posición</th><th>Pago</th></tr>
+        {% for h in jugados %}
+          <tr>
+            <td><a href="{{ url_for('ver_partido', partido_id=h.partido_id) }}">{{ h.cancha }} — {{ h.distrito }}</a></td>
+            <td>{{ h.fecha }} {{ h.hora }}</td>
+            <td>{{ POSICIONES[h.posicion].emoji }} {{ POSICIONES[h.posicion].label }}</td>
+            <td>{% if h.estado_pago == 'pagado' %}<span class="badge ok">Pagado</span>{% else %}<span class="badge full">Pendiente</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+
+  <h2 class="section-title" style="margin-top:26px">Mis reservas de cancha <span class="muted">({{ reservas|length }})</span></h2>
+  {% if not reservas %}
+    <div class="card"><p class="muted">No tienes reservas de cancha. <a href="{{ url_for('canchas') }}">Explora el directorio</a>.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Cancha</th><th>Fecha</th><th>Estado</th></tr>
+        {% for r in reservas %}
+          <tr>
+            <td>{{ r.cancha_nombre }} — {{ r.distrito }}</td>
+            <td>{{ r.fecha }} {{ r.hora }}</td>
+            <td>
+              {% if r.estado == 'confirmada' %}
+                <span class="badge ok"><span class="dot"></span>Confirmada</span>
+              {% elif r.estado == 'rechazada' %}
+                <span class="badge full">Rechazada</span>
+              {% else %}
+                <span class="badge full">Pendiente</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

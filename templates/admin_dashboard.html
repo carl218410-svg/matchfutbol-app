@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Panel admin</h2>
+      <p class="section-sub">Resumen de MatchFutbol.</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('admin_logout') }}">Salir del panel admin</a>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2 style="margin:0">⚽ Partidos</h2>
+      <p class="muted" style="margin:4px 0 12px">{{ m.partidos_activos }} activos próximos de {{ m.partidos_totales }} totales · {{ m.partidos_cancelados }} cancelados</p>
+      <a class="btn sec" href="{{ url_for('index') }}">Ver partidos</a>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0">👥 Usuarios</h2>
+      <p class="muted" style="margin:4px 0 12px">{{ m.usuarios }} registrados</p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0">🧑‍💼 Organizadores</h2>
+      <p class="muted" style="margin:4px 0 12px">
+        {{ m.organizadores_aprobados }} aprobados ({{ m.organizadores_verificados }} verificados) ·
+        <b>{{ m.organizadores_pendientes }} solicitudes pendientes</b>
+      </p>
+      <a class="btn sec" href="{{ url_for('admin_organizadores') }}">Gestionar organizadores</a>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0">💰 Pagos</h2>
+      <p class="muted" style="margin:4px 0 12px">
+        {{ m.inscripciones_pagadas }} pagadas · {{ m.inscripciones_pendientes }} pendientes<br>
+        Recaudado estimado: <b>S/ {{ '%.2f'|format(recaudado) }}</b>
+      </p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0">🏟️ Canchas</h2>
+      <p class="muted" style="margin:4px 0 12px">
+        {{ m.canchas }} registradas · {{ m.duenos_cancha }} dueños ·
+        <b>{{ m.reservas_pendientes }} reservas por confirmar</b>
+      </p>
+      <a class="btn sec" href="{{ url_for('canchas') }}">Ver directorio</a>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0">🏆 Liga MatchFutbol</h2>
+      <p class="muted" style="margin:4px 0 12px">{{ m.equipos_liga }} equipos inscritos</p>
+      <a class="btn sec" href="{{ url_for('admin_liga') }}">Gestionar tabla</a>
+    </div>
+  </div>
+{% endblock %}

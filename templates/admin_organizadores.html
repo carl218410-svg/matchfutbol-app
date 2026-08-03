@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Volver al panel</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Organizadores</h2>
+      <p class="section-sub">Aprueba solicitudes y verifica identidad (DNI).</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('admin_logout') }}">Salir del panel admin</a>
+  </div>
+
+  <h2 style="margin-top:22px">Solicitudes pendientes de aprobación <span class="muted">({{ pendientes|length }})</span></h2>
+  <div class="card">
+    {% if not pendientes %}
+      <p class="muted">No hay solicitudes pendientes.</p>
+    {% else %}
+      <div class="table-wrap">
+      <table>
+        <tr><th>Nombre</th><th>Teléfono</th><th>DNI</th><th></th></tr>
+        {% for o in pendientes %}
+          <tr>
+            <td>{{ o.nombre }}</td>
+            <td>{{ o.telefono }}</td>
+            <td>{{ o.dni or '—' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('admin_aprobar_organizador', usuario_id=o.id) }}">
+                <button class="btn" type="submit">Aprobar</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <h2 style="margin-top:22px">Organizadores aprobados <span class="muted">({{ organizadores|length }})</span></h2>
+  <div class="card">
+    <div class="table-wrap">
+    <table>
+      <tr><th>Nombre</th><th>Teléfono</th><th>DNI</th><th>Estado</th><th></th></tr>
+      {% for o in organizadores %}
+        <tr>
+          <td>{{ o.nombre }}</td>
+          <td>{{ o.telefono }}</td>
+          <td>{{ o.dni or '—' }}</td>
+          <td>
+            {% if o.verificado %}
+              <span class="verificado-badge" style="color:#065f46;background:#dcfce7;">✅ Verificado</span>
+            {% else %}
+              <span class="badge full">Pendiente</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not o.verificado %}
+              <form method="post" action="{{ url_for('admin_verificar_organizador', usuario_id=o.id) }}">
+                <button class="btn sec" type="submit" {{ 'disabled' if not o.dni }}>Verificar</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+{% endblock %}

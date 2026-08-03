@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('ver_partido', partido_id=partido.id) }}" class="back-link">← Volver al partido</a>
+  <h2 class="section-title">Enviar recordatorio</h2>
+  <p class="section-sub">
+    {{ partido.cancha }} · {{ partido.fecha }} {{ partido.hora }} — haz clic en cada inscrito
+    para abrir WhatsApp con el mensaje ya escrito y enviárselo a su celular.
+  </p>
+
+  <div class="card">
+    <form method="post">
+      <button class="btn" type="submit">Guardar recordatorio también dentro de la app</button>
+    </form>
+  </div>
+
+  {% if not links %}
+    <div class="card"><p class="muted">Todavía no hay inscritos en este partido.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Jugador</th><th>Posición</th><th></th></tr>
+        {% for l in links %}
+          <tr>
+            <td>{{ l.nombre }}</td>
+            <td>{{ POSICIONES[l.posicion].emoji }} {{ POSICIONES[l.posicion].label }}</td>
+            <td>
+              <a class="btn sec" href="{{ l.wa }}" target="_blank" rel="noopener">📱 Enviar por WhatsApp</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('canchas') }}" class="back-link">← Volver a canchas</a>
+  <div class="card" style="max-width:480px; margin:0 auto;">
+    <h1>Tu reserva</h1>
+    <p class="muted">{{ reserva.cancha_nombre }} · 📍 {{ reserva.distrito }}</p>
+    <div class="meta-row"><span class="ico">📅</span> {{ reserva.fecha }}</div>
+    <div class="meta-row"><span class="ico">🕐</span> {{ reserva.hora }}</div>
+    {% if reserva.nota %}<div class="meta-row"><span class="ico">📝</span> {{ reserva.nota }}</div>{% endif %}
+
+    <div style="margin-top:14px">
+      {% if reserva.estado == 'confirmada' %}
+        <span class="badge ok"><span class="dot"></span>Confirmada por el dueño</span>
+      {% elif reserva.estado == 'rechazada' %}
+        <span class="badge full">Rechazada</span>
+      {% else %}
+        <span class="badge full">Pendiente de confirmación</span>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:16px">
+      <a class="btn sec block" href="{{ wa_link(reserva.dueno_telefono, 'Hola ' ~ reserva.dueno_nombre ~ ', te escribo por la reserva de ' ~ reserva.cancha_nombre ~ ' el ' ~ reserva.fecha ~ ' a las ' ~ reserva.hora ~ '.') }}" target="_blank" rel="noopener">📱 Escribirle al dueño</a>
+    </div>
+  </div>
+{% endblock %}

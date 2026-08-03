@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('ver_partido', partido_id=partido.id) }}" class="back-link">← Volver al partido</a>
+  <div class="card" style="max-width:480px; margin:0 auto;">
+    <h1>Confirmar pago</h1>
+    <p class="muted">
+      {{ partido.cancha }} · {{ partido.fecha }} {{ partido.hora }}<br>
+      Rol: {{ 'Arquero' if insc.rol == 'arquero' else 'Jugador' }} — a pagar
+      <b>S/ {{ '%.2f'|format(precio) }}</b>
+    </p>
+    {% if insc.estado_pago == 'pagado' %}
+      <div class="flash ok"><span>✅</span>Este cupo ya está pagado ({{ insc.metodo_pago }}{% if insc.referencia_pago %} · {{ insc.referencia_pago }}{% endif %}).</div>
+      <a class="btn block" href="{{ url_for('ver_partido', partido_id=partido.id) }}">Volver al partido</a>
+    {% else %}
+      <form method="post" id="formPago">
+        <label>Método de pago</label>
+        <select name="metodo_pago" id="metodoPago" onchange="document.getElementById('refWrap').style.display = this.value === 'yape' ? 'block' : 'none'">
+          <option value="efectivo">Efectivo en cancha</option>
+          <option value="yape">Yape / Plin</option>
+        </select>
+        <div id="refWrap" style="display:none">
+          <label>Código de operación</label>
+          <input name="referencia_pago" placeholder="Ej. OP123456">
+        </div>
+        <p class="muted" style="margin-top:10px">
+          Esto es un registro manual del pago (MVP): si eliges Yape, ingresa el código de
+          operación de la transferencia como comprobante; si eliges efectivo, se confirma al
+          llegar a la cancha.
+        </p>
+        <div style="margin-top:18px">
+          <button class="btn block" type="submit">Confirmar pago</button>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

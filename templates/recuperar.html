@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('login') }}" class="back-link">← Volver a ingresar</a>
+  <div class="card" style="max-width:460px; margin:0 auto;">
+    <h1>Restablecer contraseña</h1>
+    <p class="muted">Ingresa el correo con el que te registraste.</p>
+    <form method="post">
+      <label>Correo</label>
+      <input type="email" name="email" placeholder="tucorreo@ejemplo.com" required autofocus>
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">Enviar enlace de restablecimiento</button>
+      </div>
+    </form>
+
+    {% if enlace %}
+      <div class="flash ok" style="margin-top:18px; word-break:break-all;">
+        <span>🔗</span>
+        <span>
+          Modo demo — este es el enlace que normalmente llegaría a tu correo:<br>
+          <a href="{{ enlace }}">{{ enlace }}</a>
+        </span>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

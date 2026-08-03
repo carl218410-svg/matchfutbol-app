@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card" style="max-width:420px; margin:0 auto;">
+    <h1>Nueva contraseña</h1>
+    <form method="post">
+      <label>Contraseña nueva</label>
+      <input type="password" name="password" minlength="6" required autofocus>
+      <label>Confirmar contraseña</label>
+      <input type="password" name="confirmar_password" minlength="6" required>
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">Guardar contraseña</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

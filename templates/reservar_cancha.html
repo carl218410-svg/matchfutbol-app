@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('canchas') }}" class="back-link">← Volver a canchas</a>
+  <div class="card" style="max-width:480px; margin:0 auto;">
+    <h1>Reservar {{ cancha.nombre }}</h1>
+    <p class="muted">📍 {{ cancha.distrito }}{% if cancha.horarios %} · {{ cancha.horarios }}{% endif %}</p>
+    <p class="muted">
+      Esta es una solicitud: el dueño ({{ cancha.dueno_nombre }}) debe confirmarla antes de
+      que el horario quede reservado.
+    </p>
+    <form method="post">
+      <div class="row">
+        <div>
+          <label>Fecha</label>
+          <input type="date" name="fecha" required>
+        </div>
+        <div>
+          <label>Hora</label>
+          <input type="time" name="hora" required>
+        </div>
+      </div>
+      <label>Nota (opcional)</label>
+      <input name="nota" placeholder="Ej. somos 10, jugamos fulbito">
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">Enviar solicitud de reserva</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Mis canchas</h2>
+      <p class="section-sub">Gestiona la ficha de tus canchas.</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('nueva_cancha') }}">+ Nueva cancha</a>
+  </div>
+
+  {% if not canchas %}
+    <div class="card"><p class="muted">Todavía no registraste ninguna cancha. <a href="{{ url_for('nueva_cancha') }}">Crea la primera</a>.</p></div>
+  {% else %}
+    <div class="grid">
+      {% for c in canchas %}
+        <div class="card">
+          <h2 style="margin:0 0 4px">{{ c.nombre }}</h2>
+          <span class="dist">📍 {{ c.distrito }}</span>
+          {% if c.horarios %}<div class="meta-row" style="margin-top:8px"><span class="ico">🕐</span>{{ c.horarios }}</div>{% endif %}
+          <div style="margin-top:14px">
+            <a class="btn sec block" href="{{ url_for('editar_cancha', cancha_id=c.id) }}">Editar ficha</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <h2 class="section-title" style="margin-top:26px">Reservas <span class="muted">({{ reservas|length }})</span></h2>
+  {% if not reservas %}
+    <div class="card"><p class="muted">Todavía no hay solicitudes de reserva.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Cancha</th><th>Fecha</th><th>Solicitante</th><th>Estado</th><th></th></tr>
+        {% for r in reservas %}
+          <tr>
+            <td>{{ r.cancha_nombre }}</td>
+            <td>{{ r.fecha }} {{ r.hora }}{% if r.nota %}<br><span class="muted">{{ r.nota }}</span>{% endif %}</td>
+            <td>
+              {{ r.solicitante }}
+              <a href="{{ wa_link(r.solicitante_telefono, 'Hola ' ~ r.solicitante ~ ', te escribo por tu reserva del ' ~ r.fecha ~ ' a las ' ~ r.hora ~ '.') }}" target="_blank" rel="noopener" title="WhatsApp">📱</a>
+            </td>
+            <td>
+              {% if r.estado == 'confirmada' %}
+                <span class="badge ok"><span class="dot"></span>Confirmada</span>
+              {% elif r.estado == 'rechazada' %}
+                <span class="badge full">Rechazada</span>
+              {% else %}
+                <span class="badge full">Pendiente</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.estado == 'pendiente' %}
+                <form method="post" action="{{ url_for('confirmar_reserva', reserva_id=r.id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit">Confirmar</button>
+                </form>
+                <form method="post" action="{{ url_for('rechazar_reserva', reserva_id=r.id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit">Rechazar</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

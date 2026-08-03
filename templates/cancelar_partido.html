@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('ver_partido', partido_id=partido.id) }}" class="back-link">← Volver al partido</a>
+  <h2 class="section-title">Cancelar partido</h2>
+  <p class="section-sub">{{ partido.cancha }} · {{ partido.fecha }} {{ partido.hora }}</p>
+
+  {% if partido.estado == 'cancelado' %}
+    <div class="card">
+      <div class="flash error"><span>⚠️</span>Este partido ya está cancelado.</div>
+      <p class="muted">Usa los enlaces de abajo si todavía te falta avisarle a alguien por WhatsApp.</p>
+    </div>
+  {% else %}
+    <div class="card" style="max-width:520px">
+      <p class="muted">
+        Se avisará dentro de la app a los {{ links|length }} inscrito(s) actuales.
+        Esta acción no se puede deshacer.
+      </p>
+      <form method="post">
+        <label>Motivo (opcional)</label>
+        <input name="motivo" placeholder="Ej. lluvia, cancha no disponible...">
+        <div style="margin-top:18px">
+          <button class="btn" type="submit" style="background:linear-gradient(120deg,#dc2626,#ef4444)">
+            Confirmar cancelación
+          </button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if links %}
+    <h2 style="margin-top:22px">Avisar por WhatsApp <span class="muted">({{ links|length }})</span></h2>
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Jugador</th><th></th></tr>
+        {% for l in links %}
+          <tr>
+            <td>{{ l.nombre }}</td>
+            <td><a class="btn sec" href="{{ l.wa }}" target="_blank" rel="noopener">📱 Avisar por WhatsApp</a></td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
