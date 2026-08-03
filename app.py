@@ -1882,6 +1882,13 @@ def api_partidos():
 # "python app.py"), porque un servidor WSGI de produccion como gunicorn
 # importa `app` directamente y nunca ejecuta el bloque __main__ de abajo.
 # Sin esto, la base de datos nunca se crearia en un despliegue real.
+print(f"[MatchFutbol] DB_PATH = {DB_PATH!r}", flush=True)
+print(f"[MatchFutbol] dirname existe = {os.path.isdir(os.path.dirname(DB_PATH) or '.')}", flush=True)
+try:
+    print(f"[MatchFutbol] contenido de {os.path.dirname(DB_PATH) or '.'} = "
+          f"{os.listdir(os.path.dirname(DB_PATH) or '.')}", flush=True)
+except Exception as _e:
+    print(f"[MatchFutbol] no se pudo listar el directorio: {_e!r}", flush=True)
 init_db()
 
 if __name__ == "__main__":
