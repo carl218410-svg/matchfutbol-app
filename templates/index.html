@@ -118,6 +118,9 @@
             <div>
               <h2>{{ p.cancha }}</h2>
               <span class="dist">📍 {{ p.distrito }}</span>
+              {% if p.cancha_verificada %}
+                <span class="verificado-badge" style="color:#065f46;background:#dcfce7;">✅</span>
+              {% endif %}
             </div>
             {% if p.disponibles > 0 %}
               <span class="badge ok"><span class="dot"></span>{{ p.disponibles }} libres</span>

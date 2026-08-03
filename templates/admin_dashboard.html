@@ -52,5 +52,14 @@
       <p class="muted" style="margin:4px 0 12px">{{ m.equipos_liga }} equipos inscritos</p>
       <a class="btn sec" href="{{ url_for('admin_liga') }}">Gestionar tabla</a>
     </div>
+
+    <div class="card">
+      <h2 style="margin:0">🚩 Reportes</h2>
+      <p class="muted" style="margin:4px 0 12px">
+        <b>{{ m.reportes_pendientes }} pendientes de revisar</b> ·
+        {{ m.organizadores_suspendidos }} organizador(es) suspendido(s)
+      </p>
+      <a class="btn sec" href="{{ url_for('admin_reportes') }}">Revisar reportes</a>
+    </div>
   </div>
 {% endblock %}

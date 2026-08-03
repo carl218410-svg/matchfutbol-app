@@ -11,14 +11,25 @@
         <option value="femenino" {{ 'selected' if partido.categoria == 'femenino' }}>♀ Fútbol femenino</option>
         <option value="mixto" {{ 'selected' if partido.categoria == 'mixto' }}>⚥ Mixto</option>
       </select>
+      <label>Cancha verificada (opcional)</label>
+      <select name="cancha_id">
+        <option value="">— Escribir la cancha a mano abajo —</option>
+        {% for c in canchas %}
+          <option value="{{ c.id }}" {{ 'selected' if partido.cancha_id == c.id }}>{{ c.nombre }} — {{ c.distrito }}</option>
+        {% endfor %}
+      </select>
+      <p class="muted" style="margin-top:-8px">
+        Si eliges una cancha de la lista, se usa su nombre/distrito registrados
+        (ignora los dos campos de abajo).
+      </p>
       <div class="row">
         <div>
-          <label>Cancha</label>
-          <input name="cancha" value="{{ partido.cancha }}" required>
+          <label>Cancha (si no elegiste una de la lista)</label>
+          <input name="cancha" value="{{ partido.cancha }}">
         </div>
         <div>
           <label>Distrito</label>
-          <input name="distrito" value="{{ partido.distrito }}" required>
+          <input name="distrito" value="{{ partido.distrito }}">
         </div>
       </div>
       <div class="row">

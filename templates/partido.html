@@ -11,6 +11,11 @@
       <div>
         <h1 style="margin:0">{{ partido.cancha }}</h1>
         <span class="dist">📍 {{ partido.distrito }}</span>
+        {% if partido.cancha_verificada %}
+          <span class="verificado-badge" style="color:#065f46;background:#dcfce7;">✅ Cancha verificada</span>
+        {% else %}
+          <span class="badge full" title="El organizador escribió esta cancha a mano; MatchFutbol no confirmó que exista.">⚠️ Cancha no verificada</span>
+        {% endif %}
       </div>
       {% if partido.estado == 'cancelado' %}
         <span class="badge full">Cancelado</span>
@@ -35,6 +40,10 @@
         {% endif %}
       </div>
     </div>
+    <p class="muted" style="margin-top:6px">
+      {{ partido.organizador }} organizó {{ partido.organizador_partidos }} partido(s) en MatchFutbol
+      {% if partido.organizador_cancelados %}· {{ partido.organizador_cancelados }} cancelado(s){% endif %}.
+    </p>
 
     {% if usuario_actual and usuario_actual.id == partido.organizador_id %}
       <div class="row" style="margin-top:14px">
@@ -88,6 +97,9 @@
         {{ POSICIONES[mi_inscripcion.posicion].emoji }} {{ POSICIONES[mi_inscripcion.posicion].label }} —
         {{ 'pago confirmado' if mi_inscripcion.estado_pago == 'pagado' else 'pago pendiente' }}.
       </div>
+      {% if mi_inscripcion.estado_pago != 'pagado' %}
+        <p class="muted">⏳ Tienes {{ MINUTOS_LIMITE_PAGO }} minutos desde que te inscribiste para pagar, o el cupo se libera solo.</p>
+      {% endif %}
       <div class="row">
         {% if mi_inscripcion.estado_pago != 'pagado' %}
           <a class="btn" href="{{ url_for('pagar', inscripcion_id=mi_inscripcion.id) }}">Registrar pago</a>
@@ -153,4 +165,21 @@
       <span><i style="background:#fff;border:2px dashed #cbd5e1"></i> Libre</span>
     </div>
   </div>
+
+  {% if usuario_actual and not es_organizador_partido %}
+    <details class="card" style="cursor:default">
+      <summary style="cursor:pointer; font-weight:600; color:var(--muted)">🚩 Reportar este partido</summary>
+      <p class="muted" style="margin-top:10px">
+        Úsalo si crees que este partido es falso, que la cancha no existe, o que el
+        organizador no cumplió. El equipo de MatchFutbol lo revisa.
+      </p>
+      <form method="post" action="{{ url_for('reportar_partido', partido_id=partido.id) }}">
+        <textarea name="motivo" rows="3" placeholder="Cuéntanos qué pasó..." required
+                  style="width:100%; padding:11px 13px; border:1.5px solid var(--borde); border-radius:10px; font-family:inherit; font-size:.95rem;"></textarea>
+        <div style="margin-top:12px">
+          <button class="btn sec" type="submit">Enviar reporte</button>
+        </div>
+      </form>
+    </details>
+  {% endif %}
 {% endblock %}

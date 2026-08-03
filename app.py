@@ -91,6 +91,10 @@ FORMACION = {"arquero": 1, "defensa": 2, "volante": 2, "delantero": 1}
 JUGADORES_POR_EQUIPO = sum(FORMACION.values())
 CUPOS_POR_PARTIDO = JUGADORES_POR_EQUIPO * 2
 
+# Si una inscripcion queda "pendiente" de pago mas de este plazo, se libera
+# sola para no bloquearle el cupo a otro jugador.
+MINUTOS_LIMITE_PAGO = 30
+
 
 def wa_link(telefono, mensaje):
     """Genera un enlace wa.me con el mensaje ya escrito (envío manual, sin API)."""
@@ -107,6 +111,7 @@ app.jinja_env.globals["POSICIONES"] = POSICIONES
 app.jinja_env.globals["NIVELES"] = NIVELES
 app.jinja_env.globals["FORMACION"] = FORMACION
 app.jinja_env.globals["GOOGLE_LOGIN_ENABLED"] = GOOGLE_LOGIN_ENABLED
+app.jinja_env.globals["MINUTOS_LIMITE_PAGO"] = MINUTOS_LIMITE_PAGO
 
 
 # ---------------------------------------------------------------------------
@@ -141,11 +146,17 @@ def _migrar_telefono_opcional(conn):
     )
     if col is None or col["notnull"] == 0:
         return  # ya es opcional
-    columnas = (
-        "id, nombre, telefono, email, password_hash, reset_token, "
-        "reset_token_expira, google_id, posicion, nivel_juego, es_organizador, "
-        "organizador_solicitado, es_dueno_cancha, dni, verificado, creado_en"
-    )
+    # Solo copia columnas que ya existen en la tabla vieja (por si esta
+    # migracion corre en una base muy antigua que aun no tiene alguna de
+    # las columnas mas nuevas, como "suspendido").
+    cols_viejas = {r["name"] for r in conn.execute("PRAGMA table_info(usuarios)").fetchall()}
+    columnas_nuevas = [
+        "id", "nombre", "telefono", "email", "password_hash", "reset_token",
+        "reset_token_expira", "google_id", "posicion", "nivel_juego", "es_organizador",
+        "organizador_solicitado", "es_dueno_cancha", "dni", "verificado", "suspendido",
+        "creado_en",
+    ]
+    columnas = ", ".join(c for c in columnas_nuevas if c in cols_viejas)
     conn.executescript(f"""
         ALTER TABLE usuarios RENAME TO usuarios_old;
         CREATE TABLE usuarios (
@@ -164,6 +175,7 @@ def _migrar_telefono_opcional(conn):
             es_dueno_cancha INTEGER NOT NULL DEFAULT 0,
             dni TEXT,
             verificado INTEGER NOT NULL DEFAULT 0,
+            suspendido INTEGER NOT NULL DEFAULT 0,
             creado_en TEXT NOT NULL
         );
         INSERT INTO usuarios ({columnas})
@@ -286,6 +298,17 @@ def init_db():
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         );
 
+        CREATE TABLE IF NOT EXISTS reportes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            partido_id INTEGER NOT NULL,
+            usuario_id INTEGER NOT NULL,
+            motivo TEXT NOT NULL,
+            resuelto INTEGER NOT NULL DEFAULT 0,
+            creado_en TEXT NOT NULL,
+            FOREIGN KEY (partido_id) REFERENCES partidos(id),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        );
+
         CREATE TABLE IF NOT EXISTS liga_tabla (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             equipo_id INTEGER NOT NULL,
@@ -310,6 +333,8 @@ def init_db():
                             "categoria TEXT NOT NULL DEFAULT 'masculino'")
     _add_column_if_missing(conn, "partidos", "grupo_whatsapp", "grupo_whatsapp TEXT")
     _add_column_if_missing(conn, "partidos", "estado", "estado TEXT NOT NULL DEFAULT 'activo'")
+    _add_column_if_missing(conn, "partidos", "cancha_id", "cancha_id INTEGER")
+    _add_column_if_missing(conn, "usuarios", "suspendido", "suspendido INTEGER NOT NULL DEFAULT 0")
     _add_column_if_missing(conn, "usuarios", "password_hash", "password_hash TEXT")
     _add_column_if_missing(conn, "usuarios", "dni", "dni TEXT")
     _add_column_if_missing(conn, "usuarios", "verificado",
@@ -617,6 +642,13 @@ def organizador_required(f):
         if not g.usuario["es_organizador"]:
             flash("Solo organizadores pueden crear partidos.", "error")
             return redirect(url_for("index"))
+        if g.usuario["suspendido"]:
+            flash(
+                "Tu cuenta de organizador está suspendida por reportes de otros "
+                "usuarios. Contacta al equipo de MatchFutbol si crees que es un error.",
+                "error",
+            )
+            return redirect(url_for("index"))
         return f(*args, **kwargs)
     return wrapper
 
@@ -811,7 +843,41 @@ def restablecer_password(token):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+def crear_notificacion(conn, usuario_id, tipo, mensaje, partido_id=None):
+    conn.execute(
+        "INSERT INTO notificaciones (usuario_id, partido_id, tipo, mensaje, leida, creado_en) "
+        "VALUES (?,?,?,?,0,?)",
+        (usuario_id, partido_id, tipo, mensaje, datetime.now().isoformat(timespec="seconds")),
+    )
+
+
+def liberar_inscripciones_vencidas(conn, partido_id):
+    """Si una inscripcion lleva mas de MINUTOS_LIMITE_PAGO en estado
+    'pendiente' de pago, se libera sola (se borra) para no bloquearle el
+    cupo a otro jugador indefinidamente. Se llama cada vez que se consulta
+    un partido, asi no hace falta un proceso en segundo plano aparte."""
+    limite = (
+        datetime.now() - timedelta(minutes=MINUTOS_LIMITE_PAGO)
+    ).isoformat(timespec="seconds")
+    vencidas = conn.execute(
+        "SELECT id, usuario_id FROM inscripciones "
+        "WHERE partido_id = ? AND estado_pago = 'pendiente' AND creado_en < ?",
+        (partido_id, limite),
+    ).fetchall()
+    for v in vencidas:
+        conn.execute("DELETE FROM inscripciones WHERE id = ?", (v["id"],))
+        crear_notificacion(
+            conn, v["usuario_id"], "cupo_liberado",
+            f"Tu cupo se liberó automáticamente porque no se confirmó el pago "
+            f"dentro de {MINUTOS_LIMITE_PAGO} minutos.",
+            partido_id=partido_id,
+        )
+    if vencidas:
+        conn.commit()
+
+
 def partido_con_cupos(conn, partido_id):
+    liberar_inscripciones_vencidas(conn, partido_id)
     p = conn.execute("SELECT * FROM partidos WHERE id = ?", (partido_id,)).fetchone()
     if p is None:
         return None
@@ -826,6 +892,20 @@ def partido_con_cupos(conn, partido_id):
     ).fetchone()
     d["organizador"] = org["nombre"] if org else "?"
     d["organizador_verificado"] = bool(org["verificado"]) if org else False
+    stats = conn.execute(
+        "SELECT COUNT(*) AS total, "
+        "SUM(CASE WHEN estado='cancelado' THEN 1 ELSE 0 END) AS cancelados "
+        "FROM partidos WHERE organizador_id = ?",
+        (p["organizador_id"],),
+    ).fetchone()
+    d["organizador_partidos"] = stats["total"] or 0
+    d["organizador_cancelados"] = stats["cancelados"] or 0
+    d["cancha_verificada"] = False
+    if p["cancha_id"]:
+        cancha = conn.execute(
+            "SELECT id FROM canchas WHERE id = ?", (p["cancha_id"],)
+        ).fetchone()
+        d["cancha_verificada"] = cancha is not None
     return d
 
 
@@ -833,6 +913,7 @@ def plantilla_partido(conn, partido_id):
     """Arma la plantilla de los dos equipos (A y B) con sus puestos fijos
     (1 arquero, 2 defensas, 2 volantes, 1 delantero cada uno). Cada puesto es
     una lista de tamaño fijo: None si está libre, o la fila del inscrito."""
+    liberar_inscripciones_vencidas(conn, partido_id)
     filas = conn.execute(
         "SELECT i.id AS inscripcion_id, i.equipo, i.posicion, i.estado_pago, "
         "u.id AS usuario_id, u.nombre, u.telefono "
@@ -855,12 +936,17 @@ def plantilla_partido(conn, partido_id):
     return plantilla, filas
 
 
-def crear_notificacion(conn, usuario_id, tipo, mensaje, partido_id=None):
-    conn.execute(
-        "INSERT INTO notificaciones (usuario_id, partido_id, tipo, mensaje, leida, creado_en) "
-        "VALUES (?,?,?,?,0,?)",
-        (usuario_id, partido_id, tipo, mensaje, datetime.now().isoformat(timespec="seconds")),
-    )
+def resolver_cancha_desde_form(conn, form):
+    """Si el organizador eligió una cancha del directorio verificado
+    (dropdown), se usa el nombre/distrito reales de esa cancha y se guarda
+    el vínculo (cancha_id) para mostrar el sello de "verificada". Si prefirió
+    escribirla a mano, se usa el texto libre tal cual, sin vínculo."""
+    cancha_id_raw = (form.get("cancha_id") or "").strip()
+    if cancha_id_raw:
+        cancha = conn.execute("SELECT * FROM canchas WHERE id = ?", (cancha_id_raw,)).fetchone()
+        if cancha:
+            return cancha["nombre"], cancha["distrito"], cancha["id"]
+    return form.get("cancha", "").strip(), form.get("distrito", "").strip(), None
 
 
 # ---------------------------------------------------------------------------
@@ -1070,6 +1156,31 @@ def cancelar_inscripcion(inscripcion_id):
     return redirect(url_for("ver_partido", partido_id=partido["id"]))
 
 
+@app.route("/partido/<int:partido_id>/reportar", methods=["POST"])
+@login_required
+def reportar_partido(partido_id):
+    conn = get_db()
+    partido = partido_con_cupos(conn, partido_id)
+    if partido is None:
+        conn.close()
+        flash("Ese partido no existe.", "error")
+        return redirect(url_for("index"))
+    motivo = request.form.get("motivo", "").strip()
+    if not motivo:
+        conn.close()
+        flash("Cuéntanos qué pasó para poder revisarlo.", "error")
+        return redirect(url_for("ver_partido", partido_id=partido_id))
+    conn.execute(
+        "INSERT INTO reportes (partido_id, usuario_id, motivo, resuelto, creado_en) "
+        "VALUES (?,?,?,0,?)",
+        (partido_id, g.usuario["id"], motivo, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    conn.close()
+    flash("Gracias, el equipo de MatchFutbol va a revisar este partido.", "ok")
+    return redirect(url_for("ver_partido", partido_id=partido_id))
+
+
 @app.route("/partido/<int:partido_id>/grupo", methods=["POST"])
 @organizador_required
 def actualizar_grupo_whatsapp(partido_id):
@@ -1126,7 +1237,11 @@ def editar_partido(partido_id):
             categoria = request.form.get("categoria", partido["categoria"])
             if categoria not in ("masculino", "femenino", "mixto"):
                 categoria = partido["categoria"]
-            cancha_nueva = request.form["cancha"].strip()
+            cancha_nueva, distrito_nuevo, cancha_id_nuevo = resolver_cancha_desde_form(
+                conn, request.form
+            )
+            if not cancha_nueva or not distrito_nuevo:
+                raise KeyError("cancha")
             fecha_nueva = request.form["fecha"]
             hora_nueva = request.form["hora"]
             cambio_horario = (
@@ -1134,11 +1249,12 @@ def editar_partido(partido_id):
                 or hora_nueva != partido["hora"]
             )
             conn.execute(
-                "UPDATE partidos SET cancha=?, distrito=?, fecha=?, hora=?, "
+                "UPDATE partidos SET cancha=?, distrito=?, cancha_id=?, fecha=?, hora=?, "
                 "precio_jugador=?, precio_arquero=?, categoria=? WHERE id=?",
                 (
                     cancha_nueva,
-                    request.form["distrito"].strip(),
+                    distrito_nuevo,
+                    cancha_id_nuevo,
                     fecha_nueva,
                     hora_nueva,
                     float(request.form["precio_jugador"]),
@@ -1165,8 +1281,9 @@ def editar_partido(partido_id):
             return redirect(url_for("ver_partido", partido_id=partido_id))
         except (ValueError, KeyError):
             flash("Revisa los datos del formulario.", "error")
+    canchas = conn.execute("SELECT * FROM canchas ORDER BY distrito, nombre").fetchall()
     conn.close()
-    return render_template("editar_partido.html", partido=partido)
+    return render_template("editar_partido.html", partido=partido, canchas=canchas)
 
 
 @app.route("/partido/<int:partido_id>/cancelar", methods=["GET", "POST"])
@@ -1262,14 +1379,18 @@ def crear_partido():
             categoria = request.form.get("categoria", "masculino")
             if categoria not in ("masculino", "femenino", "mixto"):
                 categoria = "masculino"
+            cancha_nombre, distrito, cancha_id = resolver_cancha_desde_form(conn, request.form)
+            if not cancha_nombre or not distrito:
+                raise KeyError("cancha")
             conn.execute(
-                "INSERT INTO partidos (organizador_id, cancha, distrito, fecha, hora, "
-                "cupos_total, precio_jugador, precio_arquero, categoria, grupo_whatsapp, "
-                "creado_en) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO partidos (organizador_id, cancha, distrito, cancha_id, fecha, "
+                "hora, cupos_total, precio_jugador, precio_arquero, categoria, "
+                "grupo_whatsapp, creado_en) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     g.usuario["id"],
-                    request.form["cancha"].strip(),
-                    request.form["distrito"].strip(),
+                    cancha_nombre,
+                    distrito,
+                    cancha_id,
                     request.form["fecha"],
                     request.form["hora"],
                     CUPOS_POR_PARTIDO,
@@ -1286,8 +1407,9 @@ def crear_partido():
             return redirect(url_for("index"))
         except (ValueError, KeyError):
             flash("Revisa los datos del formulario.", "error")
+    canchas = conn.execute("SELECT * FROM canchas ORDER BY distrito, nombre").fetchall()
     conn.close()
-    return render_template("crear.html")
+    return render_template("crear.html", canchas=canchas)
 
 
 # ---------------------------------------------------------------------------
@@ -1489,6 +1611,8 @@ def admin_dashboard():
             "SELECT COUNT(*) AS n FROM inscripciones WHERE estado_pago='pendiente'"
         ),
         "equipos_liga": contar("SELECT COUNT(*) AS n FROM equipos"),
+        "reportes_pendientes": contar("SELECT COUNT(*) AS n FROM reportes WHERE resuelto=0"),
+        "organizadores_suspendidos": contar("SELECT COUNT(*) AS n FROM usuarios WHERE suspendido=1"),
     }
     recaudado = conn.execute(
         "SELECT COALESCE(SUM(CASE WHEN i.rol='arquero' THEN p.precio_arquero ELSE p.precio_jugador "
@@ -1578,6 +1702,75 @@ def admin_verificar_organizador(usuario_id):
     conn.close()
     flash(f"{usuario['nombre']} verificado.", "ok")
     return redirect(url_for("admin_organizadores"))
+
+
+@app.route("/admin/organizadores/<int:usuario_id>/suspender", methods=["POST"])
+@admin_required
+def admin_suspender_organizador(usuario_id):
+    conn = get_db()
+    usuario = conn.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    if usuario is None:
+        conn.close()
+        flash("Ese usuario no existe.", "error")
+        return redirect(url_for("admin_reportes"))
+    conn.execute("UPDATE usuarios SET suspendido = 1 WHERE id = ?", (usuario_id,))
+    crear_notificacion(
+        conn, usuario_id, "confirmacion",
+        "Tu cuenta de organizador fue suspendida por reportes de otros usuarios. "
+        "Contacta al equipo de MatchFutbol si crees que es un error.",
+    )
+    conn.commit()
+    conn.close()
+    flash(f"{usuario['nombre']} suspendido como organizador.", "ok")
+    return redirect(request.referrer or url_for("admin_reportes"))
+
+
+@app.route("/admin/organizadores/<int:usuario_id>/reactivar", methods=["POST"])
+@admin_required
+def admin_reactivar_organizador(usuario_id):
+    conn = get_db()
+    usuario = conn.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    if usuario is None:
+        conn.close()
+        flash("Ese usuario no existe.", "error")
+        return redirect(url_for("admin_reportes"))
+    conn.execute("UPDATE usuarios SET suspendido = 0 WHERE id = ?", (usuario_id,))
+    crear_notificacion(
+        conn, usuario_id, "confirmacion",
+        "Tu cuenta de organizador fue reactivada. Ya puedes crear partidos de nuevo.",
+    )
+    conn.commit()
+    conn.close()
+    flash(f"{usuario['nombre']} reactivado como organizador.", "ok")
+    return redirect(request.referrer or url_for("admin_reportes"))
+
+
+@app.route("/admin/reportes")
+@admin_required
+def admin_reportes():
+    conn = get_db()
+    reportes = conn.execute(
+        "SELECT r.*, p.cancha, p.fecha, p.hora, p.organizador_id, p.estado AS partido_estado, "
+        "u.nombre AS reportante, o.nombre AS organizador, o.suspendido AS organizador_suspendido "
+        "FROM reportes r "
+        "JOIN partidos p ON p.id = r.partido_id "
+        "JOIN usuarios u ON u.id = r.usuario_id "
+        "JOIN usuarios o ON o.id = p.organizador_id "
+        "ORDER BY r.resuelto, r.creado_en DESC"
+    ).fetchall()
+    conn.close()
+    return render_template("admin_reportes.html", reportes=reportes)
+
+
+@app.route("/admin/reportes/<int:reporte_id>/resolver", methods=["POST"])
+@admin_required
+def admin_resolver_reporte(reporte_id):
+    conn = get_db()
+    conn.execute("UPDATE reportes SET resuelto = 1 WHERE id = ?", (reporte_id,))
+    conn.commit()
+    conn.close()
+    flash("Reporte marcado como resuelto.", "ok")
+    return redirect(url_for("admin_reportes"))
 
 
 # ---------------------------------------------------------------------------

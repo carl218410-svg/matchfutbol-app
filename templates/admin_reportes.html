@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Volver al panel</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Reportes de partidos</h2>
+      <p class="section-sub">{{ reportes|length }} reporte(s) en total.</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('admin_logout') }}">Salir del panel admin</a>
+  </div>
+
+  {% if not reportes %}
+    <div class="card"><p class="muted">Todavía no hay reportes de jugadores.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr>
+          <th>Estado</th><th>Partido</th><th>Organizador</th><th>Reportado por</th>
+          <th>Motivo</th><th>Fecha</th><th></th>
+        </tr>
+        {% for r in reportes %}
+          <tr>
+            <td>
+              {% if r.resuelto %}
+                <span class="badge ok"><span class="dot"></span>Resuelto</span>
+              {% else %}
+                <span class="badge full">Pendiente</span>
+              {% endif %}
+            </td>
+            <td><a href="{{ url_for('ver_partido', partido_id=r.partido_id) }}">{{ r.cancha }}</a><br><span class="muted">{{ r.fecha }} {{ r.hora }}</span></td>
+            <td>
+              {{ r.organizador }}
+              {% if r.organizador_suspendido %}<br><span class="badge full">Suspendido</span>{% endif %}
+            </td>
+            <td>{{ r.reportante }}</td>
+            <td style="max-width:260px">{{ r.motivo }}</td>
+            <td>{{ r.creado_en[:10] }}</td>
+            <td style="white-space:nowrap">
+              {% if not r.resuelto %}
+                <form method="post" action="{{ url_for('admin_resolver_reporte', reporte_id=r.id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit">Marcar resuelto</button>
+                </form>
+              {% endif %}
+              {% if r.organizador_suspendido %}
+                <form method="post" action="{{ url_for('admin_reactivar_organizador', usuario_id=r.organizador_id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit">Reactivar organizador</button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ url_for('admin_suspender_organizador', usuario_id=r.organizador_id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit" style="color:#b91c1c">Suspender organizador</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

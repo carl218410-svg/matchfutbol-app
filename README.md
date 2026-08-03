@@ -16,6 +16,11 @@ arquero, con precio diferenciado) y crear partidos como organizador.
   contraseña** (sesiones Flask). El teléfono **no** es parte del login —
   es un dato más de perfil, opcional, que solo se usa si lo agregas para
   recibir avisos por WhatsApp.
+- **Protecciones anti-abuso:** partidos vinculados a canchas verificadas del
+  directorio (badge ✅/⚠️), historial público de partidos organizados/cancelados
+  por cada organizador, botón para reportar un partido sospechoso (panel admin
+  en `/admin/reportes` para revisar y suspender organizadores), y liberación
+  automática de cupos sin pago confirmado después de 30 minutos.
 - **Login/registro con Google (OAuth, opcional):** botón "Continuar con
   Google" en `/login` y `/registro`. Solo aparece si configuras
   `MATCHFUTBOL_GOOGLE_CLIENT_ID` / `MATCHFUTBOL_GOOGLE_CLIENT_SECRET`; si no

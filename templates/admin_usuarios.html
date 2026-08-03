@@ -39,6 +39,9 @@
             {% elif u.organizador_solicitado %}
               <span class="badge full">Organizador (pendiente)</span>
             {% endif %}
+            {% if u.suspendido %}
+              <span class="badge full">🚫 Suspendido</span>
+            {% endif %}
             {% if u.es_dueno_cancha %}
               <span class="verificado-badge">🏟️ Dueño de cancha</span>
             {% endif %}

@@ -18,14 +18,26 @@
         <option value="femenino">♀ Fútbol femenino</option>
         <option value="mixto">⚥ Mixto</option>
       </select>
+      <label>Cancha verificada (opcional)</label>
+      <select name="cancha_id">
+        <option value="">— Escribir la cancha a mano abajo —</option>
+        {% for c in canchas %}
+          <option value="{{ c.id }}">{{ c.nombre }} — {{ c.distrito }}</option>
+        {% endfor %}
+      </select>
+      <p class="muted" style="margin-top:-8px">
+        Si eliges una cancha de la lista, el partido se muestra como "✅ cancha verificada"
+        y se usa su nombre/distrito registrados (ignora los dos campos de abajo).
+        Si no aparece la tuya, escríbela a mano.
+      </p>
       <div class="row">
         <div>
-          <label>Cancha</label>
-          <input name="cancha" placeholder="Complejo El Golazo" required>
+          <label>Cancha (si no elegiste una de la lista)</label>
+          <input name="cancha" placeholder="Complejo El Golazo">
         </div>
         <div>
           <label>Distrito</label>
-          <input name="distrito" placeholder="Huacho" value="Huacho" required>
+          <input name="distrito" placeholder="Huacho" value="Huacho">
         </div>
       </div>
       <div class="row">
