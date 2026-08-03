@@ -39,7 +39,9 @@
             <td>{{ r.fecha }} {{ r.hora }}{% if r.nota %}<br><span class="muted">{{ r.nota }}</span>{% endif %}</td>
             <td>
               {{ r.solicitante }}
-              <a href="{{ wa_link(r.solicitante_telefono, 'Hola ' ~ r.solicitante ~ ', te escribo por tu reserva del ' ~ r.fecha ~ ' a las ' ~ r.hora ~ '.') }}" target="_blank" rel="noopener" title="WhatsApp">📱</a>
+              {% if r.solicitante_telefono %}
+                <a href="{{ wa_link(r.solicitante_telefono, 'Hola ' ~ r.solicitante ~ ', te escribo por tu reserva del ' ~ r.fecha ~ ' a las ' ~ r.hora ~ '.') }}" target="_blank" rel="noopener" title="WhatsApp">📱</a>
+              {% endif %}
             </td>
             <td>
               {% if r.estado == 'confirmada' %}

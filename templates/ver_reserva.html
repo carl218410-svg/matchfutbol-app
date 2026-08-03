@@ -19,7 +19,11 @@
     </div>
 
     <div style="margin-top:16px">
-      <a class="btn sec block" href="{{ wa_link(reserva.dueno_telefono, 'Hola ' ~ reserva.dueno_nombre ~ ', te escribo por la reserva de ' ~ reserva.cancha_nombre ~ ' el ' ~ reserva.fecha ~ ' a las ' ~ reserva.hora ~ '.') }}" target="_blank" rel="noopener">📱 Escribirle al dueño</a>
+      {% if reserva.dueno_telefono %}
+        <a class="btn sec block" href="{{ wa_link(reserva.dueno_telefono, 'Hola ' ~ reserva.dueno_nombre ~ ', te escribo por la reserva de ' ~ reserva.cancha_nombre ~ ' el ' ~ reserva.fecha ~ ' a las ' ~ reserva.hora ~ '.') }}" target="_blank" rel="noopener">📱 Escribirle al dueño</a>
+      {% else %}
+        <p class="muted">El dueño de la cancha no tiene teléfono registrado todavía.</p>
+      {% endif %}
     </div>
   </div>
 {% endblock %}

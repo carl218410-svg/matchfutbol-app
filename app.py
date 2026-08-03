@@ -24,6 +24,7 @@ from flask import (
     Flask, request, redirect, url_for, render_template, flash, jsonify,
     session, g,
 )
+from authlib.integrations.flask_client import OAuth
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # En Railway/Render el disco del contenedor se borra en cada redeploy o
@@ -38,6 +39,26 @@ app.secret_key = os.environ.get("MATCHFUTBOL_SECRET_KEY", "matchfutbol-huacho-de
 
 PASSWORD_DEMO_DEFAULT = "huacho123"  # password de los usuarios sembrados en _seed()
 ADMIN_PASSWORD = os.environ.get("MATCHFUTBOL_ADMIN_PASSWORD", "admin123")
+
+# ---------------------------------------------------------------------------
+# Login con Google (OAuth 2.0) — opcional: si no se configuran las
+# credenciales, el boton "Continuar con Google" simplemente no se muestra
+# (ver GOOGLE_LOGIN_ENABLED) y el resto de la app funciona igual con
+# correo + contraseña.
+# ---------------------------------------------------------------------------
+GOOGLE_CLIENT_ID = os.environ.get("MATCHFUTBOL_GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("MATCHFUTBOL_GOOGLE_CLIENT_SECRET")
+GOOGLE_LOGIN_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+oauth = OAuth(app)
+if GOOGLE_LOGIN_ENABLED:
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 # Posiciones estilo Trova: el arquero paga precio distinto, las otras tres
 # son solo etiqueta/preferencia de juego (mismo precio de "jugador").
@@ -77,6 +98,7 @@ app.jinja_env.globals["wa_link"] = wa_link
 app.jinja_env.globals["POSICIONES"] = POSICIONES
 app.jinja_env.globals["NIVELES"] = NIVELES
 app.jinja_env.globals["FORMACION"] = FORMACION
+app.jinja_env.globals["GOOGLE_LOGIN_ENABLED"] = GOOGLE_LOGIN_ENABLED
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +118,53 @@ def _add_column_if_missing(conn, tabla, columna, ddl):
         conn.commit()
 
 
+def _migrar_telefono_opcional(conn):
+    """El telefono es un dato mas del perfil (para WhatsApp), no una
+    credencial de acceso: no debe ser obligatorio para registrarse (por
+    ejemplo con Google, que no lo entrega). Antes era NOT NULL UNIQUE a
+    nivel de tabla; SQLite no permite quitar esa restriccion con ALTER
+    TABLE, asi que se reconstruye la tabla una sola vez si hace falta.
+    Se llama despues de que todas las columnas nuevas (google_id,
+    reset_token, etc.) ya existen, para poder copiarlas todas."""
+    col = next(
+        (r for r in conn.execute("PRAGMA table_info(usuarios)").fetchall()
+         if r["name"] == "telefono"),
+        None,
+    )
+    if col is None or col["notnull"] == 0:
+        return  # ya es opcional
+    columnas = (
+        "id, nombre, telefono, email, password_hash, reset_token, "
+        "reset_token_expira, google_id, posicion, nivel_juego, es_organizador, "
+        "organizador_solicitado, es_dueno_cancha, dni, verificado, creado_en"
+    )
+    conn.executescript(f"""
+        ALTER TABLE usuarios RENAME TO usuarios_old;
+        CREATE TABLE usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            telefono TEXT,
+            email TEXT,
+            password_hash TEXT,
+            reset_token TEXT,
+            reset_token_expira TEXT,
+            google_id TEXT,
+            posicion TEXT NOT NULL DEFAULT 'volante',
+            nivel_juego TEXT NOT NULL DEFAULT 'intermedio',
+            es_organizador INTEGER NOT NULL DEFAULT 0,
+            organizador_solicitado INTEGER NOT NULL DEFAULT 0,
+            es_dueno_cancha INTEGER NOT NULL DEFAULT 0,
+            dni TEXT,
+            verificado INTEGER NOT NULL DEFAULT 0,
+            creado_en TEXT NOT NULL
+        );
+        INSERT INTO usuarios ({columnas})
+        SELECT {columnas} FROM usuarios_old;
+        DROP TABLE usuarios_old;
+    """)
+    conn.commit()
+
+
 def init_db():
     """Crea las tablas y carga datos de ejemplo si la BD no existe."""
     nueva = not os.path.exists(DB_PATH)
@@ -105,7 +174,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
-            telefono TEXT NOT NULL UNIQUE,
+            telefono TEXT,
             email TEXT,
             password_hash TEXT,
             reset_token TEXT,
@@ -246,11 +315,24 @@ def init_db():
     _add_column_if_missing(conn, "usuarios", "email", "email TEXT")
     _add_column_if_missing(conn, "usuarios", "reset_token", "reset_token TEXT")
     _add_column_if_missing(conn, "usuarios", "reset_token_expira", "reset_token_expira TEXT")
-    # Indice unico parcial: permite muchos usuarios sin correo (NULL) pero no
-    # permite repetir un mismo correo entre dos cuentas.
+    _add_column_if_missing(conn, "usuarios", "google_id", "google_id TEXT")
+    # El telefono pasa a ser opcional (dato de perfil, no credencial de
+    # acceso) — reconstruye la tabla si venia de una version anterior donde
+    # era NOT NULL UNIQUE.
+    _migrar_telefono_opcional(conn)
+    # Indices unicos parciales: permiten muchos usuarios sin correo/telefono/
+    # google_id (NULL) pero no permiten repetir un mismo valor entre cuentas.
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email) "
         "WHERE email IS NOT NULL"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_telefono ON usuarios(telefono) "
+        "WHERE telefono IS NOT NULL"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google_id ON usuarios(google_id) "
+        "WHERE google_id IS NOT NULL"
     )
     # Los organizadores que ya existian (de versiones sin flujo de aprobacion)
     # se consideran ya aprobados, para no romper el acceso de quien ya usaba la app.
@@ -557,11 +639,11 @@ def admin_required(f):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        telefono = request.form.get("telefono", "").strip()
+        email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         conn = get_db()
         usuario = conn.execute(
-            "SELECT * FROM usuarios WHERE telefono = ?", (telefono,)
+            "SELECT * FROM usuarios WHERE email = ?", (email,)
         ).fetchone()
         conn.close()
         if usuario and usuario["password_hash"] and check_password_hash(
@@ -572,7 +654,7 @@ def login():
             flash(f"Bienvenido, {usuario['nombre']}.", "ok")
             destino = request.form.get("next") or url_for("index")
             return redirect(destino)
-        flash("Teléfono o contraseña incorrectos.", "error")
+        flash("Correo o contraseña incorrectos.", "error")
     return render_template("login.html", next=request.args.get("next", ""))
 
 
@@ -580,6 +662,73 @@ def login():
 def logout():
     session.clear()
     flash("Sesión cerrada.", "ok")
+    return redirect(url_for("index"))
+
+
+@app.route("/auth/google")
+def auth_google():
+    if not GOOGLE_LOGIN_ENABLED:
+        flash("El login con Google no está configurado en este servidor.", "error")
+        return redirect(url_for("login"))
+    redirect_uri = url_for("auth_google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    if not GOOGLE_LOGIN_ENABLED:
+        return redirect(url_for("login"))
+    try:
+        token = oauth.google.authorize_access_token()
+        perfil = token.get("userinfo")
+        if not perfil:
+            perfil = oauth.google.get("https://openidconnect.googleapis.com/v1/userinfo").json()
+    except Exception:
+        flash("No se pudo completar el inicio de sesión con Google. Intenta de nuevo.", "error")
+        return redirect(url_for("login"))
+    email = (perfil.get("email") or "").strip().lower()
+    google_id = perfil.get("sub")
+    nombre = perfil.get("name") or (email.split("@")[0] if email else "Jugador")
+    if not email:
+        flash("Tu cuenta de Google no tiene un correo disponible para registrar.", "error")
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    usuario = conn.execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
+    if usuario:
+        if not usuario["google_id"]:
+            conn.execute("UPDATE usuarios SET google_id = ? WHERE id = ?", (google_id, usuario["id"]))
+            conn.commit()
+        conn.close()
+        session.clear()
+        session["usuario_id"] = usuario["id"]
+        flash(f"Bienvenido, {usuario['nombre']}.", "ok")
+        return redirect(url_for("index"))
+
+    # Cuenta nueva vía Google: se crea directo, sin pedir teléfono ni nada
+    # más — el teléfono es un dato de perfil (para WhatsApp), no una
+    # credencial de acceso, así que se puede agregar después si se quiere.
+    cur = conn.execute(
+        "INSERT INTO usuarios (nombre, telefono, email, google_id, posicion, "
+        "nivel_juego, es_organizador, organizador_solicitado, es_dueno_cancha, "
+        "verificado, creado_en) VALUES (?,NULL,?,?,?,?,0,0,0,0,?)",
+        (
+            nombre,
+            email,
+            google_id,
+            "volante",
+            "intermedio",
+            datetime.now().isoformat(timespec="seconds"),
+        ),
+    )
+    conn.commit()
+    session.clear()
+    session["usuario_id"] = cur.lastrowid
+    conn.close()
+    flash(
+        "Cuenta creada con Google. Si quieres recibir avisos por WhatsApp, "
+        "agrega tu teléfono en tu perfil cuando quieras.", "ok",
+    )
     return redirect(url_for("index"))
 
 
@@ -1048,7 +1197,8 @@ def cancelar_partido(partido_id):
         "fue cancelado. Disculpa las molestias."
     )
     links = [
-        {"nombre": i["nombre"], "wa": wa_link(i["telefono"], mensaje_wa)} for i in inscritos
+        {"nombre": i["nombre"], "telefono": i["telefono"], "wa": wa_link(i["telefono"], mensaje_wa)}
+        for i in inscritos
     ]
     conn.close()
     return render_template("cancelar_partido.html", partido=partido, links=links)
@@ -1087,7 +1237,7 @@ def recordatorio(partido_id):
             "ok",
         )
     links = [
-        {"nombre": i["nombre"], "posicion": i["posicion"],
+        {"nombre": i["nombre"], "posicion": i["posicion"], "telefono": i["telefono"],
          "wa": wa_link(i["telefono"], mensaje)}
         for i in inscritos
     ]
@@ -1167,7 +1317,7 @@ def registro():
                 "dni, verificado, creado_en) VALUES (?,?,?,?,?,?,0,?,?,?,0,?)",
                 (
                     request.form["nombre"].strip(),
-                    request.form["telefono"].strip(),
+                    request.form.get("telefono", "").strip() or None,
                     email,
                     generate_password_hash(password),
                     posicion,
@@ -1209,6 +1359,7 @@ def perfil():
             nivel_juego = g.usuario["nivel_juego"]
         dni_nuevo = request.form.get("dni", "").strip() or None
         email_nuevo = request.form.get("email", "").strip().lower() or None
+        telefono_nuevo = request.form.get("telefono", "").strip() or None
         if email_nuevo and ("@" not in email_nuevo or "." not in email_nuevo.split("@")[-1]):
             conn.close()
             flash("Ingresa un correo válido.", "error")
@@ -1218,20 +1369,20 @@ def perfil():
                 # Si cambia el DNI (o lo agrega por primera vez), vuelve a quedar
                 # pendiente de verificación.
                 conn.execute(
-                    "UPDATE usuarios SET posicion=?, nivel_juego=?, email=?, dni=?, "
-                    "verificado=0 WHERE id=?",
-                    (posicion, nivel_juego, email_nuevo, dni_nuevo, g.usuario["id"]),
+                    "UPDATE usuarios SET posicion=?, nivel_juego=?, email=?, telefono=?, "
+                    "dni=?, verificado=0 WHERE id=?",
+                    (posicion, nivel_juego, email_nuevo, telefono_nuevo, dni_nuevo, g.usuario["id"]),
                 )
                 flash("Perfil actualizado. Tu nuevo DNI quedó pendiente de verificación.", "ok")
             else:
                 conn.execute(
-                    "UPDATE usuarios SET posicion=?, nivel_juego=?, email=? WHERE id=?",
-                    (posicion, nivel_juego, email_nuevo, g.usuario["id"]),
+                    "UPDATE usuarios SET posicion=?, nivel_juego=?, email=?, telefono=? WHERE id=?",
+                    (posicion, nivel_juego, email_nuevo, telefono_nuevo, g.usuario["id"]),
                 )
                 flash("Perfil actualizado.", "ok")
             conn.commit()
         except sqlite3.IntegrityError:
-            flash("Ese correo ya está en uso por otra cuenta.", "error")
+            flash("Ese correo o teléfono ya está en uso por otra cuenta.", "error")
         conn.close()
         return redirect(url_for("perfil"))
 

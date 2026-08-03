@@ -36,7 +36,13 @@
         {% for l in links %}
           <tr>
             <td>{{ l.nombre }}</td>
-            <td><a class="btn sec" href="{{ l.wa }}" target="_blank" rel="noopener">📱 Avisar por WhatsApp</a></td>
+            <td>
+              {% if l.telefono %}
+                <a class="btn sec" href="{{ l.wa }}" target="_blank" rel="noopener">📱 Avisar por WhatsApp</a>
+              {% else %}
+                <span class="muted">Sin teléfono registrado</span>
+              {% endif %}
+            </td>
           </tr>
         {% endfor %}
       </table>

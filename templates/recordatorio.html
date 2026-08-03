@@ -25,7 +25,11 @@
             <td>{{ l.nombre }}</td>
             <td>{{ POSICIONES[l.posicion].emoji }} {{ POSICIONES[l.posicion].label }}</td>
             <td>
-              <a class="btn sec" href="{{ l.wa }}" target="_blank" rel="noopener">📱 Enviar por WhatsApp</a>
+              {% if l.telefono %}
+                <a class="btn sec" href="{{ l.wa }}" target="_blank" rel="noopener">📱 Enviar por WhatsApp</a>
+              {% else %}
+                <span class="muted">Sin teléfono registrado</span>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

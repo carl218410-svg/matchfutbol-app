@@ -2,7 +2,7 @@
 {% block content %}
   <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
   <h2 class="section-title">Mi perfil</h2>
-  <p class="section-sub">{{ usuario.nombre }} · {{ usuario.telefono }}</p>
+  <p class="section-sub">{{ usuario.nombre }}{% if usuario.telefono %} · {{ usuario.telefono }}{% endif %}</p>
 
   <div class="card" style="max-width:520px">
     <h2>Datos y preferencias</h2>
@@ -25,6 +25,8 @@
     <form method="post">
       <label>Correo {% if not usuario.email %}(agrégalo para poder restablecer tu contraseña){% endif %}</label>
       <input type="email" name="email" value="{{ usuario.email or '' }}" placeholder="tucorreo@ejemplo.com">
+      <label>Teléfono {% if not usuario.telefono %}(opcional, para recibir avisos por WhatsApp){% endif %}</label>
+      <input name="telefono" value="{{ usuario.telefono or '' }}" placeholder="999111222">
       <div class="row">
         <div>
           <label>Posición preferida</label>

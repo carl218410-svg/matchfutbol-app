@@ -12,8 +12,14 @@ arquero, con precio diferenciado) y crear partidos como organizador.
 - **Ver un partido** e inscribirse eligiendo posición y precio diferenciado
   para arquero.
 - **Crear partido** (rol organizador, aprobado por admin).
-- **Registrar usuario** (con correo) e **iniciar sesión** con teléfono +
-  contraseña (sesiones Flask).
+- **Registrar usuario** e **iniciar sesión con correo (Gmail u otro) +
+  contraseña** (sesiones Flask). El teléfono **no** es parte del login —
+  es un dato más de perfil, opcional, que solo se usa si lo agregas para
+  recibir avisos por WhatsApp.
+- **Login/registro con Google (OAuth, opcional):** botón "Continuar con
+  Google" en `/login` y `/registro`. Solo aparece si configuras
+  `MATCHFUTBOL_GOOGLE_CLIENT_ID` / `MATCHFUTBOL_GOOGLE_CLIENT_SECRET`; si no
+  se configuran, la app sigue funcionando normal con correo/contraseña.
 - **Restablecer contraseña por correo:** en `/recuperar` (modo demo: el
   enlace de restablecimiento se muestra en pantalla en vez de enviarse por
   email real, porque no hay credenciales SMTP configuradas).
@@ -45,15 +51,15 @@ arquero, con precio diferenciado) y crear partidos como organizador.
 
 ## Cuentas de prueba
 
-Todos los usuarios sembrados usan la contraseña `huacho123` (teléfono como
-usuario, correo `nombre.apellido@matchfutbol.demo` en minúsculas — útil para
-probar `/recuperar`). Algunos casos útiles para probar:
+Todos los usuarios sembrados usan la contraseña `huacho123` y su correo
+(`nombre.apellido@matchfutbol.demo`, en minúsculas) como usuario para
+iniciar sesión. Algunos casos útiles para probar:
 
-- `999111222` (Carlos Rojas) — organizador aprobado y verificado.
-- `999222333` (Lucía Fernández) — organizadora aprobada, identidad pendiente.
-- `999222888` (Sofía Meza) — solicitud de organizador pendiente de aprobación.
-- `999888111` (Pedro Salas) — dueño de cancha, ya tiene 2 canchas cargadas.
-- `999555666` (Luis Campos) — jugador común, sin roles especiales.
+- `carlos.rojas@matchfutbol.demo` — organizador aprobado y verificado.
+- `lucia.fernandez@matchfutbol.demo` — organizadora aprobada, identidad pendiente.
+- `sofia.meza@matchfutbol.demo` — solicitud de organizador pendiente de aprobación.
+- `pedro.salas@matchfutbol.demo` — dueño de cancha, ya tiene 2 canchas cargadas.
+- `luis.campos@matchfutbol.demo` — jugador común, sin roles especiales.
 
 Panel admin: `/admin/login`, password `admin123` (o variable de entorno
 `MATCHFUTBOL_ADMIN_PASSWORD`). Desde ahí: aprobar organizadores, verificar
@@ -85,6 +91,12 @@ cualquiera de esos tres:
      Genera una con `python -c "import secrets; print(secrets.token_hex(32))"`.
    - `MATCHFUTBOL_ADMIN_PASSWORD` — password del panel `/admin/login`
      (por defecto es `admin123`, cualquiera podría entrar si no lo cambias).
+   - `MATCHFUTBOL_GOOGLE_CLIENT_ID` / `MATCHFUTBOL_GOOGLE_CLIENT_SECRET`
+     (opcionales) — habilitan el botón "Continuar con Google". Se generan en
+     Google Cloud Console → "Google Auth platform" → "Clients" → Create
+     Client → Web application, agregando `<tu-url>/auth/google/callback`
+     en "Authorized redirect URIs". Sin estas variables, el botón no
+     aparece y el login por correo/contraseña sigue funcionando igual.
 2. **Servidor de producción.** El repo incluye un `Procfile`
    (`web: gunicorn app:app`) y `gunicorn` ya está en `requirements.txt` —
    no uses el servidor de desarrollo de Flask (`python app.py`) en

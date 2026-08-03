@@ -3,21 +3,25 @@
   <a href="{{ url_for('index') }}" class="back-link">← Volver a partidos</a>
   <div class="card" style="max-width:520px; margin:0 auto;">
     <h1>Crea tu cuenta</h1>
+    {% if GOOGLE_LOGIN_ENABLED %}
+      <a class="btn sec block" href="{{ url_for('auth_google') }}">🔵 Registrarme con Google</a>
+      <div class="or-divider"><span>o con tu correo</span></div>
+    {% endif %}
     <p class="muted">Regístrate para inscribirte a partidos.</p>
     <form method="post">
       <label>Nombre</label>
       <input name="nombre" placeholder="Nombre y apellido" required>
       <div class="row">
         <div>
-          <label>Teléfono</label>
-          <input name="telefono" placeholder="999111222" required>
+          <label>Correo</label>
+          <input type="email" name="email" placeholder="tucorreo@gmail.com" required autofocus>
         </div>
         <div>
-          <label>Correo</label>
-          <input type="email" name="email" placeholder="tucorreo@ejemplo.com" required>
+          <label>Teléfono (opcional)</label>
+          <input name="telefono" placeholder="999111222">
         </div>
       </div>
-      <p class="muted" style="margin-top:-8px">Usamos tu correo solo para restablecer tu contraseña si la olvidas.</p>
+      <p class="muted" style="margin-top:-8px">Tu correo es tu usuario para iniciar sesión (y sirve para restablecer tu contraseña). El teléfono no es necesario para registrarte — solo lo usamos si lo agregas, para avisarte por WhatsApp.</p>
       <div class="row">
         <div>
           <label>Contraseña</label>

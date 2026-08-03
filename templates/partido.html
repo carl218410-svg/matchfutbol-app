@@ -120,7 +120,7 @@
                 {% for slot in plantilla[equipo][clave] %}
                   {% if slot %}
                     {% set pago_clase = 'pagado' if slot.estado_pago == 'pagado' else 'pendiente' %}
-                    {% if es_organizador_partido %}
+                    {% if es_organizador_partido and slot.telefono %}
                       <a class="seat ocupado {{ pago_clase }}"
                          href="{{ wa_link(slot.telefono, 'Hola ' ~ slot.nombre ~ ', recordatorio de tu partido en ' ~ partido.cancha ~ ' el ' ~ partido.fecha ~ ' a las ' ~ partido.hora ~ '. ¡No faltes! - MatchFutbol' ~ (' Únete al grupo: ' ~ partido.grupo_whatsapp if partido.grupo_whatsapp else '')) }}"
                          target="_blank" rel="noopener"
