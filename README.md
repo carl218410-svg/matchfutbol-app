@@ -94,13 +94,24 @@ cualquiera de esos tres:
 3. **Puerto.** La app lee la variable `PORT` que estos proveedores
    inyectan automáticamente (con `python app.py` sigue usando el 5000
    por defecto si `PORT` no está definida).
-4. **Base de datos.** Se sigue usando SQLite (`matchfutbol.db`), que se
-   crea sola la primera vez que arranca. Ojo: en la mayoría de estos
-   hostings el sistema de archivos **no es persistente** entre
-   despliegues a menos que uses un volumen/disco persistente — revisa la
-   documentación de tu proveedor y monta un volumen para `matchfutbol.db`,
-   o migra a PostgreSQL cuando el piloto crezca (tal como recomienda la
-   sección 4 del documento de diseño).
+4. **Base de datos y volumen persistente.** Se sigue usando SQLite
+   (`matchfutbol.db`), que se crea sola la primera vez que arranca. Ojo:
+   en Railway, Render y hostings similares el disco del contenedor **se
+   borra en cada redeploy o reinicio** a menos que montes un volumen
+   persistente — si no lo haces, los usuarios/inscripciones que se
+   registren se pierden apenas el servicio se reinicia. Pasos en Railway:
+   1. En el servicio → pestaña **Volumes** → **New Volume** → móntalo en
+      `/data` (el free/trial plan incluye 1 volumen de hasta 0.5GB, de
+      sobra para este proyecto).
+   2. En **Variables**, agrega `MATCHFUTBOL_DB_PATH=/data/matchfutbol.db`.
+   3. Redeploy. Desde ahí los datos sobreviven a reinicios y nuevos
+      despliegues (Railway pausa el servicio un momento al redeployar un
+      volumen, es normal).
+
+   En Render el equivalente es un **Disk** montado en `/data` desde la
+   pestaña del servicio, con la misma variable `MATCHFUTBOL_DB_PATH`.
+   Cuando el piloto crezca más allá de esto, migrar a PostgreSQL sigue
+   siendo lo recomendado (sección 4 del documento de diseño).
 
 ## Estructura
 

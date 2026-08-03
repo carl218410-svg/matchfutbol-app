@@ -26,7 +26,12 @@ from flask import (
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "matchfutbol.db")
+# En Railway/Render el disco del contenedor se borra en cada redeploy o
+# reinicio salvo que montes un volumen persistente. MATCHFUTBOL_DB_PATH deja
+# apuntar la base de datos a ese volumen (ej. "/data/matchfutbol.db") sin
+# tocar codigo; si no se define, se usa el comportamiento original (el
+# archivo vive junto a app.py, valido para correr en local).
+DB_PATH = os.environ.get("MATCHFUTBOL_DB_PATH", os.path.join(BASE_DIR, "matchfutbol.db"))
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("MATCHFUTBOL_SECRET_KEY", "matchfutbol-huacho-demo")
