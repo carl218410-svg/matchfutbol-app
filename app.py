@@ -1489,6 +1489,13 @@ def registro():
             conn.commit()
             session.clear()
             session["usuario_id"] = cur.lastrowid
+            conn.close()
+            if quiere_cancha:
+                flash(
+                    "Cuenta creada. Ahora completa los datos de tu cancha para que "
+                    "aparezca en el directorio.", "ok",
+                )
+                return redirect(url_for("nueva_cancha"))
             if quiere_organizar:
                 flash(
                     "Cuenta creada. Tu solicitud de organizador quedó pendiente de "
@@ -1496,7 +1503,6 @@ def registro():
                 )
             else:
                 flash("Cuenta creada. ¡Bienvenido a MatchFutbol!", "ok")
-            conn.close()
             return redirect(url_for("index"))
         except sqlite3.IntegrityError:
             flash("Ese teléfono o correo ya está registrado.", "error")
