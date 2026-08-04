@@ -17,11 +17,16 @@
       </p>
     {% elif usuario.organizador_solicitado %}
       <p class="muted"><span class="badge full">Solicitud de organizador pendiente de aprobación</span></p>
-    {% else %}
+    {% elif usuario.telefono %}
       <form method="post" action="{{ url_for('solicitar_organizador') }}" style="margin-bottom:14px">
         <p class="muted" style="margin-top:0">¿Quieres organizar tus propios partidos?</p>
         <button class="btn sec" type="submit">Quiero ser organizador</button>
       </form>
+    {% else %}
+      <p class="muted">
+        ¿Quieres organizar tus propios partidos? Primero agrega tu teléfono abajo
+        (es tu contacto para los jugadores y para MatchFutbol).
+      </p>
     {% endif %}
     {% if usuario.es_dueno_cancha %}
       <p class="muted"><span class="verificado-badge">🏟️ Dueño de cancha</span></p>

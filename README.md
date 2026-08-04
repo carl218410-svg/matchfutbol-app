@@ -47,7 +47,13 @@ arquero, con precio diferenciado) y crear partidos como organizador.
 - **Perfil de usuario:** editar posición/nivel de juego, teléfono, correo y
   DNI, ver historial de partidos jugados y próximos con estado de pago, y
   pedir ser organizador desde ahí en cualquier momento (no solo al
-  registrarte).
+  registrarte). El teléfono es obligatorio para pedir ser organizador
+  (jugadores normales lo dejan opcional).
+- **Chat interno con MatchFutbol (sin WhatsApp):** cada organizador (o
+  solicitante) tiene un hilo de mensajes directo con el equipo de
+  MatchFutbol en `/mensajes`, con aviso de no leídos en el menú. El admin
+  ve y responde todos los hilos en `/admin/mensajes`. No es un chat entre
+  jugadores ni entre organizadores — es solo organizador↔admin.
 - **Rol Dueño de cancha:** autodeclarado en el registro; gestiona la ficha
   de su(s) cancha(s) (horarios, contacto, descripción) en `/mis-canchas`;
   directorio público en `/canchas` con enlace directo a WhatsApp.
@@ -155,6 +161,11 @@ mvp/
 │   ├── liga.html                 # tabla de posiciones pública
 │   ├── admin_login.html          # login del panel admin
 │   ├── admin_organizadores.html  # aprobar organizadores + verificar DNI
+│   ├── admin_usuarios.html       # listado/búsqueda de todos los usuarios
+│   ├── admin_reportes.html       # revisar reportes + suspender organizadores
+│   ├── mensajes.html             # chat del organizador con MatchFutbol
+│   ├── admin_mensajes.html       # lista de hilos de chat (vista admin)
+│   ├── admin_mensajes_hilo.html  # hilo de chat con un organizador (vista admin)
 │   └── admin_liga.html           # editar tabla de la liga
 └── matchfutbol.db       # (se genera al ejecutar)
 ```

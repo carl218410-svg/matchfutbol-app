@@ -61,5 +61,13 @@
       </p>
       <a class="btn sec" href="{{ url_for('admin_reportes') }}">Revisar reportes</a>
     </div>
+
+    <div class="card">
+      <h2 style="margin:0">💬 Mensajes</h2>
+      <p class="muted" style="margin:4px 0 12px">
+        <b>{{ m.mensajes_pendientes }} organizador(es) con mensajes sin leer</b>
+      </p>
+      <a class="btn sec" href="{{ url_for('admin_mensajes') }}">Ver mensajes</a>
+    </div>
   </div>
 {% endblock %}

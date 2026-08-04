@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Volver al panel</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Mensajes con organizadores</h2>
+      <p class="section-sub">{{ organizadores|length }} organizador(es) / solicitante(s).</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('admin_logout') }}">Salir del panel admin</a>
+  </div>
+
+  {% if not organizadores %}
+    <div class="card"><p class="muted">Todavía no hay organizadores registrados.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr><th>Organizador</th><th>Estado</th><th>Último mensaje</th><th>Sin leer</th><th></th></tr>
+        {% for o in organizadores %}
+          <tr>
+            <td>{{ o.nombre }}</td>
+            <td>{% if o.suspendido %}<span class="badge full">Suspendido</span>{% else %}<span class="badge ok">Activo</span>{% endif %}</td>
+            <td>{{ o.ultimo[:16] | replace('T', ' ') if o.ultimo else '—' }}</td>
+            <td>{% if o.no_leidos %}<span class="badge full">{{ o.no_leidos }}</span>{% else %}<span class="muted">0</span>{% endif %}</td>
+            <td><a class="btn sec btn-slot" href="{{ url_for('admin_mensajes_hilo', usuario_id=o.id) }}">Abrir chat</a></td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

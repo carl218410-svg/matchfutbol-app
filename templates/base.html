@@ -282,6 +282,9 @@
         {% if usuario_actual and usuario_actual.es_dueno_cancha %}
           <a href="{{ url_for('mis_canchas') }}">Mis canchas</a>
         {% endif %}
+        {% if usuario_actual and (usuario_actual.es_organizador or usuario_actual.organizador_solicitado) %}
+          <a href="{{ url_for('mensajes_organizador') }}">Mensajes con MatchFutbol{% if mensajes_no_leidos %}<span class="notif-dot"></span>{% endif %}</a>
+        {% endif %}
         {% if usuario_actual %}
           <a href="{{ url_for('notificaciones') }}">Notificaciones{% if notif_no_leidas %}<span class="notif-dot"></span>{% endif %}</a>
           <span class="navsep"></span>
@@ -294,6 +297,7 @@
         {% if es_admin %}
           <span class="navsep"></span>
           <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+          <a href="{{ url_for('admin_mensajes') }}">Mensajes</a>
         {% endif %}
       </nav>
     </div>

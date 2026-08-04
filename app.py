@@ -298,6 +298,17 @@ def init_db():
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         );
 
+        CREATE TABLE IF NOT EXISTS mensajes_admin (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            organizador_id INTEGER NOT NULL,
+            de_admin INTEGER NOT NULL DEFAULT 0,
+            mensaje TEXT NOT NULL,
+            leido_admin INTEGER NOT NULL DEFAULT 0,
+            leido_organizador INTEGER NOT NULL DEFAULT 0,
+            creado_en TEXT NOT NULL,
+            FOREIGN KEY (organizador_id) REFERENCES usuarios(id)
+        );
+
         CREATE TABLE IF NOT EXISTS reportes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             partido_id INTEGER NOT NULL,
@@ -600,6 +611,7 @@ def _seed(conn):
 def cargar_usuario_actual():
     g.usuario = None
     g.notif_no_leidas = 0
+    g.mensajes_no_leidos = 0
     usuario_id = session.get("usuario_id")
     if usuario_id:
         conn = get_db()
@@ -611,6 +623,12 @@ def cargar_usuario_actual():
                 "SELECT COUNT(*) AS n FROM notificaciones WHERE usuario_id = ? AND leida = 0",
                 (usuario_id,),
             ).fetchone()["n"]
+            if g.usuario["es_organizador"] or g.usuario["organizador_solicitado"]:
+                g.mensajes_no_leidos = conn.execute(
+                    "SELECT COUNT(*) AS n FROM mensajes_admin WHERE organizador_id = ? "
+                    "AND de_admin = 1 AND leido_organizador = 0",
+                    (usuario_id,),
+                ).fetchone()["n"]
         conn.close()
 
 
@@ -619,6 +637,7 @@ def inyectar_usuario():
     return {
         "usuario_actual": g.get("usuario"),
         "notif_no_leidas": g.get("notif_no_leidas", 0),
+        "mensajes_no_leidos": g.get("mensajes_no_leidos", 0),
         "es_admin": session.get("is_admin", False),
     }
 
@@ -1430,6 +1449,14 @@ def registro():
         if password != confirmar:
             flash("Las contraseñas no coinciden.", "error")
             return render_template("registro.html")
+        telefono = request.form.get("telefono", "").strip() or None
+        quiere_organizar = request.form.get("es_organizador") == "on"
+        if quiere_organizar and not telefono:
+            flash(
+                "Para pedir ser organizador necesitas un teléfono — es tu contacto para "
+                "los jugadores y para MatchFutbol.", "error",
+            )
+            return render_template("registro.html")
         conn = get_db()
         try:
             dni = request.form.get("dni", "").strip() or None
@@ -1439,7 +1466,6 @@ def registro():
             nivel_juego = request.form.get("nivel_juego", "intermedio")
             if nivel_juego not in NIVELES:
                 nivel_juego = "intermedio"
-            quiere_organizar = request.form.get("es_organizador") == "on"
             quiere_cancha = request.form.get("es_dueno_cancha") == "on"
             cur = conn.execute(
                 "INSERT INTO usuarios (nombre, telefono, email, password_hash, posicion, "
@@ -1447,7 +1473,7 @@ def registro():
                 "dni, verificado, creado_en) VALUES (?,?,?,?,?,?,0,?,?,?,0,?)",
                 (
                     request.form["nombre"].strip(),
-                    request.form.get("telefono", "").strip() or None,
+                    telefono,
                     email,
                     generate_password_hash(password),
                     posicion,
@@ -1484,6 +1510,12 @@ def solicitar_organizador():
         return redirect(url_for("perfil"))
     if g.usuario["organizador_solicitado"]:
         flash("Tu solicitud ya está pendiente de aprobación.", "ok")
+        return redirect(url_for("perfil"))
+    if not g.usuario["telefono"]:
+        flash(
+            "Antes de pedir ser organizador, agrega tu teléfono aquí abajo — es tu "
+            "contacto para los jugadores y para MatchFutbol.", "error",
+        )
         return redirect(url_for("perfil"))
     conn = get_db()
     conn.execute(
@@ -1580,6 +1612,38 @@ def notificaciones():
     return render_template("notificaciones.html", notificaciones=notifs)
 
 
+@app.route("/mensajes", methods=["GET", "POST"])
+@login_required
+def mensajes_organizador():
+    if not (g.usuario["es_organizador"] or g.usuario["organizador_solicitado"]):
+        flash("Esta bandeja es solo para organizadores (o solicitudes en curso).", "error")
+        return redirect(url_for("perfil"))
+    conn = get_db()
+    if request.method == "POST":
+        texto = request.form.get("mensaje", "").strip()
+        if texto:
+            conn.execute(
+                "INSERT INTO mensajes_admin (organizador_id, de_admin, mensaje, "
+                "leido_admin, leido_organizador, creado_en) VALUES (?,0,?,0,1,?)",
+                (g.usuario["id"], texto, datetime.now().isoformat(timespec="seconds")),
+            )
+            conn.commit()
+        conn.close()
+        return redirect(url_for("mensajes_organizador"))
+    hilo = conn.execute(
+        "SELECT * FROM mensajes_admin WHERE organizador_id = ? ORDER BY creado_en",
+        (g.usuario["id"],),
+    ).fetchall()
+    conn.execute(
+        "UPDATE mensajes_admin SET leido_organizador = 1 "
+        "WHERE organizador_id = ? AND de_admin = 1",
+        (g.usuario["id"],),
+    )
+    conn.commit()
+    conn.close()
+    return render_template("mensajes.html", hilo=hilo)
+
+
 # ---------------------------------------------------------------------------
 # Panel admin — verificación de identidad de organizadores
 # ---------------------------------------------------------------------------
@@ -1634,6 +1698,10 @@ def admin_dashboard():
         "equipos_liga": contar("SELECT COUNT(*) AS n FROM equipos"),
         "reportes_pendientes": contar("SELECT COUNT(*) AS n FROM reportes WHERE resuelto=0"),
         "organizadores_suspendidos": contar("SELECT COUNT(*) AS n FROM usuarios WHERE suspendido=1"),
+        "mensajes_pendientes": contar(
+            "SELECT COUNT(DISTINCT organizador_id) AS n FROM mensajes_admin "
+            "WHERE de_admin=0 AND leido_admin=0"
+        ),
     }
     recaudado = conn.execute(
         "SELECT COALESCE(SUM(CASE WHEN i.rol='arquero' THEN p.precio_arquero ELSE p.precio_jugador "
@@ -1792,6 +1860,60 @@ def admin_resolver_reporte(reporte_id):
     conn.close()
     flash("Reporte marcado como resuelto.", "ok")
     return redirect(url_for("admin_reportes"))
+
+
+@app.route("/admin/mensajes")
+@admin_required
+def admin_mensajes():
+    conn = get_db()
+    organizadores = conn.execute(
+        "SELECT u.id, u.nombre, u.suspendido, "
+        "(SELECT COUNT(*) FROM mensajes_admin m WHERE m.organizador_id = u.id "
+        " AND m.de_admin = 0 AND m.leido_admin = 0) AS no_leidos, "
+        "(SELECT MAX(creado_en) FROM mensajes_admin m WHERE m.organizador_id = u.id) AS ultimo "
+        "FROM usuarios u WHERE u.es_organizador = 1 OR u.organizador_solicitado = 1 "
+        "ORDER BY no_leidos DESC, ultimo DESC"
+    ).fetchall()
+    conn.close()
+    return render_template("admin_mensajes.html", organizadores=organizadores)
+
+
+@app.route("/admin/mensajes/<int:usuario_id>", methods=["GET", "POST"])
+@admin_required
+def admin_mensajes_hilo(usuario_id):
+    conn = get_db()
+    organizador = conn.execute("SELECT * FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+    if organizador is None:
+        conn.close()
+        flash("Ese usuario no existe.", "error")
+        return redirect(url_for("admin_mensajes"))
+    if request.method == "POST":
+        texto = request.form.get("mensaje", "").strip()
+        if texto:
+            conn.execute(
+                "INSERT INTO mensajes_admin (organizador_id, de_admin, mensaje, "
+                "leido_admin, leido_organizador, creado_en) VALUES (?,1,?,1,0,?)",
+                (usuario_id, texto, datetime.now().isoformat(timespec="seconds")),
+            )
+            crear_notificacion(
+                conn, usuario_id, "confirmacion",
+                "Tienes un mensaje nuevo del equipo de MatchFutbol. Revísalo en "
+                "'Mensajes con MatchFutbol'.",
+            )
+            conn.commit()
+        conn.close()
+        return redirect(url_for("admin_mensajes_hilo", usuario_id=usuario_id))
+    hilo = conn.execute(
+        "SELECT * FROM mensajes_admin WHERE organizador_id = ? ORDER BY creado_en",
+        (usuario_id,),
+    ).fetchall()
+    conn.execute(
+        "UPDATE mensajes_admin SET leido_admin = 1 WHERE organizador_id = ? AND de_admin = 0",
+        (usuario_id,),
+    )
+    conn.commit()
+    conn.close()
+    return render_template("admin_mensajes_hilo.html", organizador=organizador, hilo=hilo)
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_mensajes') }}" class="back-link">← Volver a mensajes</a>
+  <h2 class="section-title">Chat con {{ organizador.nombre }}</h2>
+  <p class="section-sub">
+    {{ organizador.email or organizador.telefono or '' }}
+    {% if organizador.suspendido %}· <span class="badge full">Suspendido</span>{% endif %}
+  </p>
+
+  <div class="card">
+    {% if not hilo %}
+      <p class="muted">Todavía no hay mensajes con este organizador.</p>
+    {% else %}
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px">
+        {% for m in hilo %}
+          <div style="max-width:80%; {% if not m.de_admin %}align-self:flex-start{% else %}align-self:flex-end{% endif %}">
+            <div style="padding:10px 14px; border-radius:12px; font-size:.92rem;
+                        {% if not m.de_admin %}background:#f1f5f9; color:var(--texto);{% else %}background:linear-gradient(120deg,var(--verde-osc),var(--verde)); color:#fff;{% endif %}">
+              {{ m.mensaje }}
+            </div>
+            <div class="muted" style="font-size:.72rem; margin-top:3px; {% if m.de_admin %}text-align:right{% endif %}">
+              {{ 'MatchFutbol' if m.de_admin else organizador.nombre }} · {{ m.creado_en[:16] | replace('T', ' ') }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post">
+      <textarea name="mensaje" rows="3" placeholder="Responder..." required
+                style="width:100%; padding:11px 13px; border:1.5px solid var(--borde); border-radius:10px; font-family:inherit; font-size:.95rem;"></textarea>
+      <div style="margin-top:12px">
+        <button class="btn" type="submit">Enviar respuesta</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

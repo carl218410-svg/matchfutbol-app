@@ -17,8 +17,8 @@
           <input type="email" name="email" placeholder="tucorreo@gmail.com" required autofocus>
         </div>
         <div>
-          <label>Teléfono (opcional)</label>
-          <input name="telefono" placeholder="999111222">
+          <label id="telefono_label">Teléfono (opcional)</label>
+          <input name="telefono" id="telefono_input" placeholder="999111222">
         </div>
       </div>
       <p class="muted" style="margin-top:-8px">Tu correo es tu usuario para iniciar sesión (y sirve para restablecer tu contraseña). El teléfono no es necesario para registrarte — solo lo usamos si lo agregas, para avisarte por WhatsApp.</p>
@@ -51,8 +51,10 @@
         </div>
       </div>
       <div class="check-line">
-        <input type="checkbox" name="es_organizador" id="org">
-        <label for="org">Quiero ser organizador</label>
+        <input type="checkbox" name="es_organizador" id="org"
+               onchange="document.getElementById('telefono_input').required = this.checked;
+                         document.getElementById('telefono_label').textContent = this.checked ? 'Teléfono (obligatorio para organizadores)' : 'Teléfono (opcional)';">
+        <label for="org">Quiero ser organizador (necesita teléfono)</label>
       </div>
       <div class="check-line">
         <input type="checkbox" name="es_dueno_cancha" id="dueno">
