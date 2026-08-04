@@ -44,8 +44,10 @@ arquero, con precio diferenciado) y crear partidos como organizador.
 - **Verificación de identidad de organizadores:** DNI opcional en registro
   o perfil, y panel admin para aprobar solicitudes de organizador y
   verificar identidad.
-- **Perfil de usuario:** editar posición/nivel de juego, agregar DNI,
-  ver historial de partidos jugados y próximos con estado de pago.
+- **Perfil de usuario:** editar posición/nivel de juego, teléfono, correo y
+  DNI, ver historial de partidos jugados y próximos con estado de pago, y
+  pedir ser organizador desde ahí en cualquier momento (no solo al
+  registrarte).
 - **Rol Dueño de cancha:** autodeclarado en el registro; gestiona la ficha
   de su(s) cancha(s) (horarios, contacto, descripción) en `/mis-canchas`;
   directorio público en `/canchas` con enlace directo a WhatsApp.

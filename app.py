@@ -1476,6 +1476,27 @@ def registro():
     return render_template("registro.html")
 
 
+@app.route("/perfil/ser-organizador", methods=["POST"])
+@login_required
+def solicitar_organizador():
+    if g.usuario["es_organizador"]:
+        flash("Ya eres organizador.", "ok")
+        return redirect(url_for("perfil"))
+    if g.usuario["organizador_solicitado"]:
+        flash("Tu solicitud ya está pendiente de aprobación.", "ok")
+        return redirect(url_for("perfil"))
+    conn = get_db()
+    conn.execute(
+        "UPDATE usuarios SET organizador_solicitado = 1 WHERE id = ?", (g.usuario["id"],)
+    )
+    conn.commit()
+    conn.close()
+    flash(
+        "Listo, tu solicitud quedó pendiente de aprobación del equipo de MatchFutbol.", "ok",
+    )
+    return redirect(url_for("perfil"))
+
+
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
 def perfil():
