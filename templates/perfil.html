@@ -29,7 +29,15 @@
       </p>
     {% endif %}
     {% if usuario.es_dueno_cancha %}
-      <p class="muted"><span class="verificado-badge">🏟️ Dueño de cancha</span></p>
+      <p class="muted">
+        <span class="verificado-badge">🏟️ Dueño de cancha</span>
+        · <a href="{{ url_for('mis_canchas') }}">Gestionar mis canchas</a>
+      </p>
+    {% else %}
+      <form method="post" action="{{ url_for('solicitar_dueno_cancha') }}" style="margin-bottom:14px">
+        <p class="muted" style="margin-top:0">¿Tienes una cancha? Regístrala en el directorio.</p>
+        <button class="btn sec" type="submit">Soy dueño de una cancha</button>
+      </form>
     {% endif %}
 
     <form method="post">

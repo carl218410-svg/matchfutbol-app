@@ -54,9 +54,12 @@ arquero, con precio diferenciado) y crear partidos como organizador.
   MatchFutbol en `/mensajes`, con aviso de no leídos en el menú. El admin
   ve y responde todos los hilos en `/admin/mensajes`. No es un chat entre
   jugadores ni entre organizadores — es solo organizador↔admin.
-- **Rol Dueño de cancha:** autodeclarado en el registro; gestiona la ficha
-  de su(s) cancha(s) (horarios, contacto, descripción) en `/mis-canchas`;
-  directorio público en `/canchas` con enlace directo a WhatsApp.
+- **Rol Dueño de cancha:** autodeclarado en el registro, o desde el perfil
+  en cualquier momento (botón "Soy dueño de una cancha" — importante para
+  quien se registró con Google, que se salta el formulario de registro);
+  gestiona la ficha de su(s) cancha(s) (horarios, contacto, descripción)
+  en `/mis-canchas`; directorio público en `/canchas` con enlace directo
+  a WhatsApp.
   Cada cancha elige cómo gestiona sus reservas: **dentro de MatchFutbol**
   (el jugador pide horario y el dueño confirma/rechaza en la app, como
   hasta ahora) o **por su cuenta** (el dueño ya tiene otro sistema; en

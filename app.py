@@ -1531,6 +1531,20 @@ def solicitar_organizador():
     return redirect(url_for("perfil"))
 
 
+@app.route("/perfil/ser-dueno-cancha", methods=["POST"])
+@login_required
+def solicitar_dueno_cancha():
+    if g.usuario["es_dueno_cancha"]:
+        flash("Ya tienes acceso para registrar canchas.", "ok")
+        return redirect(url_for("mis_canchas"))
+    conn = get_db()
+    conn.execute("UPDATE usuarios SET es_dueno_cancha = 1 WHERE id = ?", (g.usuario["id"],))
+    conn.commit()
+    conn.close()
+    flash("Listo, ahora puedes registrar tu(s) cancha(s).", "ok")
+    return redirect(url_for("nueva_cancha"))
+
+
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
 def perfil():
