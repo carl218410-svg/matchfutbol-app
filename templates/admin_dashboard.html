@@ -69,5 +69,11 @@
       </p>
       <a class="btn sec" href="{{ url_for('admin_mensajes') }}">Ver mensajes</a>
     </div>
+
+    <div class="card">
+      <h2 style="margin:0">📣 Anuncios</h2>
+      <p class="muted" style="margin:4px 0 12px">{{ m.anuncios_activos }} activos de {{ m.anuncios_totales }} totales</p>
+      <a class="btn sec" href="{{ url_for('admin_anuncios') }}">Gestionar anuncios</a>
+    </div>
   </div>
 {% endblock %}

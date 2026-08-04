@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Volver al panel</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div>
+      <h2 class="section-title">Anuncios / publicidad</h2>
+      <p class="section-sub">{{ anuncios|length }} anuncio(s) en total. Se muestran hasta 3 activos y vigentes en el carrusel de la portada.</p>
+    </div>
+    <a class="btn sec" href="{{ url_for('nuevo_anuncio') }}">+ Nuevo anuncio</a>
+  </div>
+
+  {% if not anuncios %}
+    <div class="card"><p class="muted">Todavía no hay anuncios.</p></div>
+  {% else %}
+    <div class="card">
+      <div class="table-wrap">
+      <table>
+        <tr>
+          <th></th><th>Estado</th><th>Anunciante</th><th>Título</th>
+          <th>Vigencia</th><th>Orden</th><th></th>
+        </tr>
+        {% for a in anuncios %}
+          <tr>
+            <td>
+              {% if a.imagen_mime %}
+                <img src="{{ url_for('anuncio_imagen', anuncio_id=a.id) }}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:8px;">
+              {% else %}
+                <span style="font-size:1.4rem">{{ a.emoji }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if a.activo %}
+                <span class="badge ok"><span class="dot"></span>Activo</span>
+              {% else %}
+                <span class="badge full">Desactivado</span>
+              {% endif %}
+            </td>
+            <td>{{ a.anunciante }}</td>
+            <td>{{ a.titulo }}</td>
+            <td class="muted">
+              {% if a.fecha_inicio or a.fecha_fin %}
+                {{ a.fecha_inicio or '…' }} → {{ a.fecha_fin or '…' }}
+              {% else %}
+                Sin límite
+              {% endif %}
+            </td>
+            <td>{{ a.orden }}</td>
+            <td style="white-space:nowrap">
+              <a class="btn sec btn-slot" href="{{ url_for('editar_anuncio', anuncio_id=a.id) }}">Editar</a>
+              {% if a.activo %}
+                <form method="post" action="{{ url_for('desactivar_anuncio', anuncio_id=a.id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit">Desactivar</button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ url_for('activar_anuncio', anuncio_id=a.id) }}" style="display:inline">
+                  <button class="btn sec btn-slot" type="submit">Activar</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

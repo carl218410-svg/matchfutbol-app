@@ -35,6 +35,13 @@ arquero, con precio diferenciado) y crear partidos como organizador.
   jugador pide un horario, el dueño lo confirma o rechaza.
 - **Panel de métricas para admin** (`/admin`): partidos, usuarios, pagos,
   canchas y liga de un vistazo.
+- **Anuncios / publicidad autogestionable** (`/admin/anuncios`): crear,
+  editar, activar/desactivar y programar auspicios que salen en el
+  carrusel de la portada. Cada anuncio puede tener una imagen real (se
+  sube desde el panel, máx. 2 MB) o quedarse con solo emoji + texto;
+  fecha de inicio y fin opcionales para programar una promo semanal,
+  quincenal o mensual con anticipación (se apaga sola sin que tengas que
+  acordarte); y un campo de orden para decidir qué anuncio se ve primero.
 - **Pago dentro de la app (simulado):** al inscribirte quedas en estado
   "pendiente" hasta registrar el pago (Yape con código de operación, o
   efectivo en cancha).
@@ -177,6 +184,8 @@ mvp/
 │   ├── mensajes.html             # chat del organizador con MatchFutbol
 │   ├── admin_mensajes.html       # lista de hilos de chat (vista admin)
 │   ├── admin_mensajes_hilo.html  # hilo de chat con un organizador (vista admin)
+│   ├── admin_anuncios.html       # lista/gestión de anuncios publicitarios
+│   ├── admin_anuncio_form.html   # crear/editar un anuncio (con imagen)
 │   └── admin_liga.html           # editar tabla de la liga
 └── matchfutbol.db       # (se genera al ejecutar)
 ```

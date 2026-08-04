@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="{{ url_for('admin_anuncios') }}" class="back-link">← Volver a anuncios</a>
+  <div class="card" style="max-width:560px; margin:0 auto;">
+    <h1>{{ 'Editar anuncio' if anuncio else 'Nuevo anuncio' }}</h1>
+    <form method="post" enctype="multipart/form-data">
+      <label>Anunciante</label>
+      <input name="anunciante" placeholder="Deportes El Crack" value="{{ anuncio.anunciante if anuncio else '' }}" required>
+      <label>Título</label>
+      <input name="titulo" placeholder="20% dcto en chimpunes" value="{{ anuncio.titulo if anuncio else '' }}" required>
+      <label>Texto</label>
+      <input name="texto" placeholder="Muestra tu inscripción y llévate 20% en toda la tienda." value="{{ anuncio.texto if anuncio else '' }}" required>
+      <label>Enlace (opcional)</label>
+      <input name="url" placeholder="https://..." value="{{ anuncio.url if anuncio else '' }}">
+
+      <label>Imagen (opcional, máx. 2 MB — si no subes una se usa el emoji)</label>
+      {% if anuncio and anuncio.imagen_mime %}
+        <div style="margin-bottom:8px">
+          <img src="{{ url_for('anuncio_imagen', anuncio_id=anuncio.id) }}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:12px;">
+          <span class="muted">Imagen actual — sube otra para reemplazarla.</span>
+        </div>
+      {% endif %}
+      <input type="file" name="imagen" accept="image/*">
+
+      <label>Emoji (se usa si no hay imagen)</label>
+      <input name="emoji" placeholder="📣" value="{{ anuncio.emoji if anuncio else '📣' }}" maxlength="4">
+
+      <div class="row">
+        <div>
+          <label>Vigente desde (opcional)</label>
+          <input type="date" name="fecha_inicio" value="{{ anuncio.fecha_inicio if anuncio else '' }}">
+        </div>
+        <div>
+          <label>Vigente hasta (opcional)</label>
+          <input type="date" name="fecha_fin" value="{{ anuncio.fecha_fin if anuncio else '' }}">
+        </div>
+      </div>
+      <p class="muted" style="margin-top:6px">
+        Déjalo en blanco para que no expire solo. Útil para programar una promo
+        semanal, quincenal o mensual con anticipación.
+      </p>
+
+      <label>Orden (menor número = se muestra primero)</label>
+      <input type="number" name="orden" value="{{ anuncio.orden if anuncio else 0 }}" min="0">
+
+      <div style="margin-top:20px">
+        <button class="btn block" type="submit">{{ 'Guardar cambios' if anuncio else 'Crear anuncio' }}</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

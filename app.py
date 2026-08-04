@@ -23,7 +23,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import (
     Flask, request, redirect, url_for, render_template, flash, jsonify,
-    session, g,
+    session, g, Response,
 )
 from authlib.integrations.flask_client import OAuth
 
@@ -44,6 +44,9 @@ app.secret_key = os.environ.get("MATCHFUTBOL_SECRET_KEY", "matchfutbol-huacho-de
 # manda a Google no coincide con el que registraste (error 400
 # redirect_uri_mismatch) porque el esquema no calza.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+# Límite de tamaño de subida (imágenes de anuncios): evita que alguien mande
+# un archivo gigante por error y sature la base de datos/memoria.
+app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024
 
 PASSWORD_DEMO_DEFAULT = "huacho123"  # password de los usuarios sembrados en _seed()
 ADMIN_PASSWORD = os.environ.get("MATCHFUTBOL_ADMIN_PASSWORD", "admin123")
@@ -362,6 +365,11 @@ def init_db():
     _add_column_if_missing(conn, "usuarios", "google_id", "google_id TEXT")
     _add_column_if_missing(conn, "canchas", "gestion_reservas",
                             "gestion_reservas TEXT NOT NULL DEFAULT 'interna'")
+    _add_column_if_missing(conn, "anuncios", "imagen_datos", "imagen_datos BLOB")
+    _add_column_if_missing(conn, "anuncios", "imagen_mime", "imagen_mime TEXT")
+    _add_column_if_missing(conn, "anuncios", "fecha_inicio", "fecha_inicio TEXT")
+    _add_column_if_missing(conn, "anuncios", "fecha_fin", "fecha_fin TEXT")
+    _add_column_if_missing(conn, "anuncios", "orden", "orden INTEGER NOT NULL DEFAULT 0")
     # El telefono pasa a ser opcional (dato de perfil, no credencial de
     # acceso) — reconstruye la tabla si venia de una version anterior donde
     # era NOT NULL UNIQUE.
@@ -1003,9 +1011,13 @@ def index():
         r["distrito"] for r in
         conn.execute("SELECT DISTINCT distrito FROM partidos ORDER BY distrito").fetchall()
     ]
-    # anuncios patrocinados: hasta 3 activos para el carrusel
+    # anuncios patrocinados: hasta 3 activos y vigentes para el carrusel
     anuncios = conn.execute(
-        "SELECT * FROM anuncios WHERE activo = 1 ORDER BY id LIMIT 3"
+        "SELECT * FROM anuncios WHERE activo = 1 "
+        "AND (fecha_inicio IS NULL OR fecha_inicio <= ?) "
+        "AND (fecha_fin IS NULL OR fecha_fin >= ?) "
+        "ORDER BY orden, id LIMIT 3",
+        (hoy, hoy),
     ).fetchall()
     conn.close()
     return render_template(
@@ -1724,6 +1736,8 @@ def admin_dashboard():
             "SELECT COUNT(DISTINCT organizador_id) AS n FROM mensajes_admin "
             "WHERE de_admin=0 AND leido_admin=0"
         ),
+        "anuncios_activos": contar("SELECT COUNT(*) AS n FROM anuncios WHERE activo=1"),
+        "anuncios_totales": contar("SELECT COUNT(*) AS n FROM anuncios"),
     }
     recaudado = conn.execute(
         "SELECT COALESCE(SUM(CASE WHEN i.rol='arquero' THEN p.precio_arquero ELSE p.precio_jugador "
@@ -2171,6 +2185,167 @@ def rechazar_reserva(reserva_id):
     conn.close()
     flash("Reserva rechazada.", "ok")
     return redirect(url_for("mis_canchas"))
+
+
+# ---------------------------------------------------------------------------
+# Anuncios / publicidad (panel admin)
+# ---------------------------------------------------------------------------
+IMAGEN_ANUNCIO_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+
+
+def _leer_imagen_anuncio(archivo):
+    """Valida y devuelve (datos, mime) de un campo de archivo subido, o
+    (None, None) si no se subió nada. Lanza ValueError si el archivo no
+    parece una imagen o es demasiado pesado."""
+    if archivo is None or not archivo.filename:
+        return None, None
+    mime = archivo.mimetype or ""
+    if not mime.startswith("image/"):
+        raise ValueError("El archivo debe ser una imagen (JPG, PNG, etc.).")
+    datos = archivo.read()
+    if len(datos) > IMAGEN_ANUNCIO_MAX_BYTES:
+        raise ValueError("La imagen pesa demasiado (máximo 2 MB).")
+    return datos, mime
+
+
+@app.route("/anuncios/<int:anuncio_id>/imagen")
+def anuncio_imagen(anuncio_id):
+    conn = get_db()
+    a = conn.execute(
+        "SELECT imagen_datos, imagen_mime FROM anuncios WHERE id = ?", (anuncio_id,)
+    ).fetchone()
+    conn.close()
+    if a is None or not a["imagen_datos"]:
+        return "", 404
+    return Response(a["imagen_datos"], mimetype=a["imagen_mime"] or "image/jpeg")
+
+
+@app.route("/admin/anuncios")
+@admin_required
+def admin_anuncios():
+    conn = get_db()
+    anuncios = conn.execute("SELECT * FROM anuncios ORDER BY activo DESC, orden, id").fetchall()
+    conn.close()
+    return render_template("admin_anuncios.html", anuncios=anuncios)
+
+
+@app.route("/admin/anuncios/nuevo", methods=["GET", "POST"])
+@admin_required
+def nuevo_anuncio():
+    if request.method == "POST":
+        conn = get_db()
+        try:
+            datos, mime = _leer_imagen_anuncio(request.files.get("imagen"))
+            conn.execute(
+                "INSERT INTO anuncios (anunciante, titulo, texto, emoji, url, activo, "
+                "imagen_datos, imagen_mime, fecha_inicio, fecha_fin, orden, creado_en) "
+                "VALUES (?,?,?,?,?,1,?,?,?,?,?,?)",
+                (
+                    request.form["anunciante"].strip(),
+                    request.form["titulo"].strip(),
+                    request.form["texto"].strip(),
+                    request.form.get("emoji", "📣").strip() or "📣",
+                    request.form.get("url", "").strip() or None,
+                    datos,
+                    mime,
+                    request.form.get("fecha_inicio", "").strip() or None,
+                    request.form.get("fecha_fin", "").strip() or None,
+                    int(request.form.get("orden") or 0),
+                    datetime.now().isoformat(timespec="seconds"),
+                ),
+            )
+            conn.commit()
+            flash("Anuncio creado.", "ok")
+            conn.close()
+            return redirect(url_for("admin_anuncios"))
+        except ValueError as e:
+            flash(str(e) or "Revisa los datos del formulario.", "error")
+        except KeyError:
+            flash("Revisa los datos del formulario.", "error")
+        conn.close()
+    return render_template("admin_anuncio_form.html", anuncio=None)
+
+
+@app.route("/admin/anuncios/<int:anuncio_id>/editar", methods=["GET", "POST"])
+@admin_required
+def editar_anuncio(anuncio_id):
+    conn = get_db()
+    anuncio = conn.execute("SELECT * FROM anuncios WHERE id = ?", (anuncio_id,)).fetchone()
+    if anuncio is None:
+        conn.close()
+        flash("Ese anuncio no existe.", "error")
+        return redirect(url_for("admin_anuncios"))
+    if request.method == "POST":
+        try:
+            datos, mime = _leer_imagen_anuncio(request.files.get("imagen"))
+            if datos is None:
+                # No se subió una imagen nueva: conserva la que ya tenía.
+                conn.execute(
+                    "UPDATE anuncios SET anunciante=?, titulo=?, texto=?, emoji=?, url=?, "
+                    "fecha_inicio=?, fecha_fin=?, orden=? WHERE id=?",
+                    (
+                        request.form["anunciante"].strip(),
+                        request.form["titulo"].strip(),
+                        request.form["texto"].strip(),
+                        request.form.get("emoji", "📣").strip() or "📣",
+                        request.form.get("url", "").strip() or None,
+                        request.form.get("fecha_inicio", "").strip() or None,
+                        request.form.get("fecha_fin", "").strip() or None,
+                        int(request.form.get("orden") or 0),
+                        anuncio_id,
+                    ),
+                )
+            else:
+                conn.execute(
+                    "UPDATE anuncios SET anunciante=?, titulo=?, texto=?, emoji=?, url=?, "
+                    "imagen_datos=?, imagen_mime=?, fecha_inicio=?, fecha_fin=?, orden=? "
+                    "WHERE id=?",
+                    (
+                        request.form["anunciante"].strip(),
+                        request.form["titulo"].strip(),
+                        request.form["texto"].strip(),
+                        request.form.get("emoji", "📣").strip() or "📣",
+                        request.form.get("url", "").strip() or None,
+                        datos,
+                        mime,
+                        request.form.get("fecha_inicio", "").strip() or None,
+                        request.form.get("fecha_fin", "").strip() or None,
+                        int(request.form.get("orden") or 0),
+                        anuncio_id,
+                    ),
+                )
+            conn.commit()
+            flash("Anuncio actualizado.", "ok")
+            conn.close()
+            return redirect(url_for("admin_anuncios"))
+        except ValueError as e:
+            flash(str(e) or "Revisa los datos del formulario.", "error")
+        except KeyError:
+            flash("Revisa los datos del formulario.", "error")
+    conn.close()
+    return render_template("admin_anuncio_form.html", anuncio=anuncio)
+
+
+@app.route("/admin/anuncios/<int:anuncio_id>/activar", methods=["POST"])
+@admin_required
+def activar_anuncio(anuncio_id):
+    conn = get_db()
+    conn.execute("UPDATE anuncios SET activo = 1 WHERE id = ?", (anuncio_id,))
+    conn.commit()
+    conn.close()
+    flash("Anuncio activado.", "ok")
+    return redirect(url_for("admin_anuncios"))
+
+
+@app.route("/admin/anuncios/<int:anuncio_id>/desactivar", methods=["POST"])
+@admin_required
+def desactivar_anuncio(anuncio_id):
+    conn = get_db()
+    conn.execute("UPDATE anuncios SET activo = 0 WHERE id = ?", (anuncio_id,))
+    conn.commit()
+    conn.close()
+    flash("Anuncio desactivado.", "ok")
+    return redirect(url_for("admin_anuncios"))
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,11 @@
       <div class="ad-track">
         {% for a in anuncios %}
           <a class="ad p{{ loop.index0 }} {{ 'active' if loop.first }}" href="{{ a.url or '#' }}">
-            <span class="ad-emoji">{{ a.emoji }}</span>
+            {% if a.imagen_mime %}
+              <span class="ad-emoji"><img src="{{ url_for('anuncio_imagen', anuncio_id=a.id) }}" alt="{{ a.anunciante }}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"></span>
+            {% else %}
+              <span class="ad-emoji">{{ a.emoji }}</span>
+            {% endif %}
             <span class="ad-body">
               <span class="ad-tag">Patrocinado · {{ a.anunciante }}</span>
               <div class="ad-title">{{ a.titulo }}</div>
