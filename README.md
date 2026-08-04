@@ -57,6 +57,14 @@ arquero, con precio diferenciado) y crear partidos como organizador.
 - **Rol Dueño de cancha:** autodeclarado en el registro; gestiona la ficha
   de su(s) cancha(s) (horarios, contacto, descripción) en `/mis-canchas`;
   directorio público en `/canchas` con enlace directo a WhatsApp.
+  Cada cancha elige cómo gestiona sus reservas: **dentro de MatchFutbol**
+  (el jugador pide horario y el dueño confirma/rechaza en la app, como
+  hasta ahora) o **por su cuenta** (el dueño ya tiene otro sistema; en
+  ese caso se oculta el botón interno "Reservar horario" y solo se
+  muestra el contacto por WhatsApp — el teléfono es obligatorio en ese
+  modo, porque es la única forma de coordinar disponibilidad). Esto no
+  afecta el badge de "cancha verificada" en los partidos, que solo
+  depende de que la cancha exista en el directorio.
 - **Liga MatchFutbol:** tabla de posiciones simple por temporada en
   `/liga`, editable por el admin en `/admin/liga` (puntos se calculan
   solos).

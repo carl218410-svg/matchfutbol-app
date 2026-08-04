@@ -10,8 +10,24 @@
       <input name="distrito" placeholder="Huacho" value="{{ cancha.distrito if cancha else 'Huacho' }}" required>
       <label>Dirección</label>
       <input name="direccion" placeholder="Av. 28 de Julio 450" value="{{ cancha.direccion if cancha else '' }}">
-      <label>Teléfono de contacto</label>
-      <input name="telefono_contacto" placeholder="999888111" value="{{ cancha.telefono_contacto if cancha else '' }}">
+
+      <label>¿Cómo gestionas tus reservas?</label>
+      <select name="gestion_reservas" id="gestion_reservas"
+              onchange="document.getElementById('telefono_label').textContent = this.value === 'externa' ? 'Teléfono de contacto (obligatorio)' : 'Teléfono de contacto';
+                        document.getElementById('telefono_contacto').required = this.value === 'externa';
+                        document.getElementById('gestion_help').style.display = this.value === 'externa' ? 'block' : 'none';">
+        <option value="interna" {{ 'selected' if not cancha or cancha.gestion_reservas == 'interna' }}>Dentro de MatchFutbol (los jugadores piden horario y yo confirmo/rechazo en la app)</option>
+        <option value="externa" {{ 'selected' if cancha and cancha.gestion_reservas == 'externa' }}>Por mi cuenta (ya tengo mi propio sistema o coordino por WhatsApp)</option>
+      </select>
+      <p id="gestion_help" class="muted" style="margin-top:6px; display:{{ 'block' if cancha and cancha.gestion_reservas == 'externa' else 'none' }}">
+        No mostraremos el botón de reservar dentro de la app — solo el de WhatsApp con tu
+        teléfono, así que ese dato es obligatorio.
+      </p>
+
+      <label id="telefono_label">Teléfono de contacto{% if cancha and cancha.gestion_reservas == 'externa' %} (obligatorio){% endif %}</label>
+      <input name="telefono_contacto" id="telefono_contacto" placeholder="999888111"
+             value="{{ cancha.telefono_contacto if cancha else '' }}"
+             {{ 'required' if cancha and cancha.gestion_reservas == 'externa' }}>
       <label>Horarios disponibles</label>
       <input name="horarios" placeholder="Lun a dom 17:00-23:00" value="{{ cancha.horarios if cancha else '' }}">
       <label>Descripción</label>

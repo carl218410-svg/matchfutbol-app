@@ -360,6 +360,8 @@ def init_db():
     _add_column_if_missing(conn, "usuarios", "reset_token", "reset_token TEXT")
     _add_column_if_missing(conn, "usuarios", "reset_token_expira", "reset_token_expira TEXT")
     _add_column_if_missing(conn, "usuarios", "google_id", "google_id TEXT")
+    _add_column_if_missing(conn, "canchas", "gestion_reservas",
+                            "gestion_reservas TEXT NOT NULL DEFAULT 'interna'")
     # El telefono pasa a ser opcional (dato de perfil, no credencial de
     # acceso) — reconstruye la tabla si venia de una version anterior donde
     # era NOT NULL UNIQUE.
@@ -1955,18 +1957,31 @@ def nueva_cancha():
     if request.method == "POST":
         conn = get_db()
         try:
+            gestion = request.form.get("gestion_reservas", "interna")
+            if gestion not in ("interna", "externa"):
+                gestion = "interna"
+            telefono = request.form.get("telefono_contacto", "").strip() or g.usuario["telefono"]
+            if gestion == "externa" and not telefono:
+                flash(
+                    "Si manejas tus reservas por tu cuenta, el teléfono de contacto es "
+                    "obligatorio — es la única forma en que los jugadores podrán "
+                    "consultar disponibilidad.", "error",
+                )
+                conn.close()
+                return render_template("cancha_form.html", cancha=None)
             conn.execute(
                 "INSERT INTO canchas (dueno_id, nombre, distrito, direccion, "
-                "telefono_contacto, descripcion, horarios, creado_en) "
-                "VALUES (?,?,?,?,?,?,?,?)",
+                "telefono_contacto, descripcion, horarios, gestion_reservas, creado_en) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     g.usuario["id"],
                     request.form["nombre"].strip(),
                     request.form["distrito"].strip(),
                     request.form.get("direccion", "").strip() or None,
-                    request.form.get("telefono_contacto", "").strip() or g.usuario["telefono"],
+                    telefono,
                     request.form.get("descripcion", "").strip() or None,
                     request.form.get("horarios", "").strip() or None,
+                    gestion,
                     datetime.now().isoformat(timespec="seconds"),
                 ),
             )
@@ -1990,16 +2005,29 @@ def editar_cancha(cancha_id):
         flash("No se encontró esa cancha.", "error")
         return redirect(url_for("mis_canchas"))
     if request.method == "POST":
+        gestion = request.form.get("gestion_reservas", "interna")
+        if gestion not in ("interna", "externa"):
+            gestion = "interna"
+        telefono = request.form.get("telefono_contacto", "").strip() or g.usuario["telefono"]
+        if gestion == "externa" and not telefono:
+            flash(
+                "Si manejas tus reservas por tu cuenta, el teléfono de contacto es "
+                "obligatorio — es la única forma en que los jugadores podrán "
+                "consultar disponibilidad.", "error",
+            )
+            conn.close()
+            return render_template("cancha_form.html", cancha=cancha)
         conn.execute(
             "UPDATE canchas SET nombre=?, distrito=?, direccion=?, telefono_contacto=?, "
-            "descripcion=?, horarios=? WHERE id=?",
+            "descripcion=?, horarios=?, gestion_reservas=? WHERE id=?",
             (
                 request.form["nombre"].strip(),
                 request.form["distrito"].strip(),
                 request.form.get("direccion", "").strip() or None,
-                request.form.get("telefono_contacto", "").strip() or g.usuario["telefono"],
+                telefono,
                 request.form.get("descripcion", "").strip() or None,
                 request.form.get("horarios", "").strip() or None,
+                gestion,
                 cancha_id,
             ),
         )
@@ -2022,6 +2050,13 @@ def reservar_cancha(cancha_id):
     if cancha is None:
         conn.close()
         flash("Esa cancha no existe.", "error")
+        return redirect(url_for("canchas"))
+    if cancha["gestion_reservas"] == "externa":
+        conn.close()
+        flash(
+            f"{cancha['nombre']} gestiona sus reservas directamente. Contáctalos por "
+            "WhatsApp para consultar disponibilidad.", "error",
+        )
         return redirect(url_for("canchas"))
     if request.method == "POST":
         try:

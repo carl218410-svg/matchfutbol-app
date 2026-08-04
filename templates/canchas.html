@@ -19,13 +19,22 @@
           {% if c.horarios %}<div class="meta-row"><span class="ico">🕐</span>{{ c.horarios }}</div>{% endif %}
           {% if c.descripcion %}<p class="muted" style="margin-top:8px">{{ c.descripcion }}</p>{% endif %}
           <div class="meta-row" style="margin-top:8px"><span class="ico">👤</span>Contacto: {{ c.dueno_nombre }}</div>
-          <div class="row" style="margin-top:14px">
-            <a class="btn block" href="{{ url_for('reservar_cancha', cancha_id=c.id) }}">📅 Reservar horario</a>
-          </div>
-          {% if c.telefono_contacto %}
-            <div style="margin-top:8px">
-              <a class="btn sec block" href="{{ wa_link(c.telefono_contacto, 'Hola, vi ' ~ c.nombre ~ ' en MatchFutbol y quisiera consultar disponibilidad.') }}" target="_blank" rel="noopener">📱 Consultar por WhatsApp</a>
+          {% if c.gestion_reservas == 'externa' %}
+            <p class="muted" style="margin-top:8px">Esta cancha gestiona sus reservas directamente.</p>
+            {% if c.telefono_contacto %}
+              <div class="row" style="margin-top:8px">
+                <a class="btn block" href="{{ wa_link(c.telefono_contacto, 'Hola, vi ' ~ c.nombre ~ ' en MatchFutbol y quisiera consultar disponibilidad.') }}" target="_blank" rel="noopener">📱 Consultar por WhatsApp</a>
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="row" style="margin-top:14px">
+              <a class="btn block" href="{{ url_for('reservar_cancha', cancha_id=c.id) }}">📅 Reservar horario</a>
             </div>
+            {% if c.telefono_contacto %}
+              <div style="margin-top:8px">
+                <a class="btn sec block" href="{{ wa_link(c.telefono_contacto, 'Hola, vi ' ~ c.nombre ~ ' en MatchFutbol y quisiera consultar disponibilidad.') }}" target="_blank" rel="noopener">📱 Consultar por WhatsApp</a>
+              </div>
+            {% endif %}
           {% endif %}
         </div>
       {% endfor %}

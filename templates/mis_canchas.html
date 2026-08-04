@@ -17,6 +17,13 @@
           <h2 style="margin:0 0 4px">{{ c.nombre }}</h2>
           <span class="dist">📍 {{ c.distrito }}</span>
           {% if c.horarios %}<div class="meta-row" style="margin-top:8px"><span class="ico">🕐</span>{{ c.horarios }}</div>{% endif %}
+          <div style="margin-top:8px">
+            {% if c.gestion_reservas == 'externa' %}
+              <span class="badge full">📱 Reservas por tu cuenta</span>
+            {% else %}
+              <span class="badge ok">📅 Reservas dentro de MatchFutbol</span>
+            {% endif %}
+          </div>
           <div style="margin-top:14px">
             <a class="btn sec block" href="{{ url_for('editar_cancha', cancha_id=c.id) }}">Editar ficha</a>
           </div>
